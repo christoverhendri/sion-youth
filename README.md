@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sion Youth Dashboard
 
-## Getting Started
+Dashboard data jemaat, absensi ibadah, grup GDG, analisis, dan kalender kegiatan Sion Youth.
+Next.js + Supabase, di-deploy ke Vercel.
 
-First, run the development server:
+## Fitur
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Data jemaat**: data master, form pendaftaran publik (`/daftar`), aktif/nonaktif dengan alasan, follow-up WhatsApp + catatan.
+- **Absensi ibadah**: usher centang hadir dari HP. Pengurus bisa ubah status minggu: *Ibadah Sion* / *Gabung Umum* / *Libur* (minggu gabung/libur tidak ada absensi dan tidak dihitung).
+- **Peringatan lama tidak datang**: 🟡 2 minggu, 🔴 4 minggu ibadah Sion berturut-turut.
+- **GDG**: jemaat aktif otomatis masuk grup sesuai jenjang (Kuliah → Kerja), pilih grup dengan anggota paling sedikit. Pindah manual tidak akan ditimpa sistem. Jadwal otomatis Sabtu minggu ke-2, bisa diubah/dibatalkan per bulan.
+- **Analisis**: hobi, kemampuan & minat pelayanan, kuliah dalam/luar negeri, proporsi jenjang, absen GDG per grup, jemaat baru per bulan, tren kehadiran, retensi, top pengajak, domisili, kandidat penatalayan.
+- **Kalender**: kalender bulanan + timeline proker per bulan.
+- **Role**: `pengurus` (akses penuh) dan `penatalayan` (hanya absensi). Data pribadi dilindungi Row Level Security di database.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup (sekali saja)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Buat project Supabase** di https://supabase.com (region Singapore).
+2. Buka **SQL Editor**, tempel isi `supabase/migrations/20261101000001_init.sql`, lalu **Run**.
+3. Salin `.env.example` → `.env.local`, isi dari *Project Settings → API*:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (atau anon key)
+   - `SUPABASE_SERVICE_ROLE_KEY` (rahasia, jangan dibagikan)
+4. Buat akun pertama (1 pengurus + akun `usher`):
+   ```bash
+   node --env-file=.env.local scripts/buat-akun-awal.mjs admin PasswordKamuYangKuat
+   ```
+5. Jalankan lokal: `npm install` lalu `npm run dev` → http://localhost:3000
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy ke Vercel
 
-## Learn More
+1. Push folder ini ke GitHub.
+2. Di Vercel: *Add New Project* → pilih repo → isi 3 environment variable di atas → Deploy.
+3. Bagikan `https://<domain-kamu>/daftar` ke jemaat sebagai pengganti Google Form.
 
-To learn more about Next.js, take a look at the following resources:
+## Rutinitas
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Tiap Minggu**: usher login → Absensi → centang.
+- **Tiap minggu (pengurus)**: cek Dashboard → "Lama tidak datang" → follow up WA.
+- **Data baru dari form**: Data Jemaat → tab "Perlu review" → cek & simpan.
+- **Tahun ajaran baru (Juli)**: Pengaturan → "Naikkan kelas semua pelajar" (sekali setahun).
