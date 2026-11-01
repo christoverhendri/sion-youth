@@ -205,7 +205,7 @@ export function JemaatFields({
                 className={cn(
                   "rounded-xl border py-2 text-sm transition",
                   d.status_akademik === s
-                    ? "border-primary bg-primary/20 font-medium text-white"
+                    ? "border-primary bg-primary/20 font-medium text-ink"
                     : "border-line bg-surface text-muted hover:text-ink",
                 )}
               >
@@ -327,7 +327,7 @@ export function PelayananMatrix({
           key={b}
           className={cn(
             "flex flex-wrap items-center justify-between gap-2 px-3 py-2",
-            i % 2 ? "bg-white/[0.015]" : "bg-white/[0.035]",
+            i % 2 ? "bg-tint/[0.015]" : "bg-tint/[0.035]",
           )}
         >
           <span className="text-sm">{b}</span>
@@ -352,7 +352,7 @@ export function PelayananMatrix({
                         ? "bg-success/20 text-success"
                         : l.v === "mau_belajar"
                           ? "bg-warning/20 text-warning"
-                          : "bg-white/10 text-ink"
+                          : "bg-tint/10 text-ink"
                       : "text-faint hover:text-ink",
                   )}
                 >

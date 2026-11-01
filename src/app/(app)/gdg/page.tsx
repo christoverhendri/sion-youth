@@ -1,17 +1,20 @@
 "use client";
 
-import { AlertTriangle, CalendarDays, ChevronRight, Plus, UserRound } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronRight, Plus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GroupModal } from "@/components/group-modal";
+import { useMe } from "@/components/role";
 import { Badge, Button, Card, Empty, Loading, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import type { GdgGroup, GdgSession, Jemaat } from "@/lib/types";
+import { labelGrup, type GdgGroup, type GdgSession, type Jemaat } from "@/lib/types";
 import { firstOfMonth, fmtDate } from "@/lib/utils";
 
 type Member = Pick<Jemaat, "id" | "nama" | "status_akademik" | "gdg_group_id">;
 
 export default function GdgPage() {
+  const me = useMe();
+  const pengurus = me.role === "pengurus";
   const [groups, setGroups] = useState<GdgGroup[] | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [sessions, setSessions] = useState<GdgSession[]>([]);
@@ -23,7 +26,7 @@ export default function GdgPage() {
     const sb = createClient();
     await sb.rpc("ensure_gdg_sessions", { p_bulan: bulan });
     const [g, m, s] = await Promise.all([
-      sb.from("gdg_groups").select("*").order("target_kategori").order("nama"),
+      sb.from("gdg_groups").select("*").order("nama"),
       sb.from("jemaat").select("id, nama, status_akademik, gdg_group_id").eq("status", "aktif"),
       sb.from("gdg_sessions").select("*").eq("bulan", bulan),
     ]);
@@ -49,23 +52,25 @@ export default function GdgPage() {
     <>
       <PageHeader
         title="Grup GDG"
-        sub="Kelompok kecil, Sabtu minggu ke-2 tiap bulan. Jemaat baru otomatis masuk sesuai jenjang."
+        sub="Kelompok kecil, Sabtu minggu ke-2 tiap bulan. Jemaat baru otomatis masuk sesuai jenjang & jenis kelamin."
         action={
-          <Button variant="primary" onClick={() => setAdd("new")}>
-            <Plus size={16} /> Grup baru
-          </Button>
+          pengurus && (
+            <Button variant="primary" onClick={() => setAdd("new")}>
+              <Plus size={16} /> Grup baru
+            </Button>
+          )
         }
       />
 
-      {tanpaGrup.length > 0 && (
+      {pengurus && tanpaGrup.length > 0 && (
         <Card className="mb-5 border-warning/30">
           <div className="flex gap-3">
             <AlertTriangle className="mt-0.5 shrink-0 text-warning" size={18} />
             <div className="text-sm">
               <p className="font-medium">{tanpaGrup.length} jemaat aktif belum punya grup GDG</p>
               <p className="mt-1 text-muted">
-                Biasanya karena belum ada grup untuk jenjangnya (mis. SD). Buat grup baru dengan kategori itu dan
-                mereka otomatis masuk, atau pindahkan manual dari halaman Data Jemaat.
+                Biasanya karena jenis kelamin belum diisi, atau belum ada grup untuk jenjangnya (mis. SD). Lengkapi
+                datanya di Data Jemaat dan mereka otomatis masuk grup.
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {tanpaGrup.slice(0, 20).map((m) => (
@@ -91,7 +96,7 @@ export default function GdgPage() {
             const s = sessions.find((x) => x.group_id === g.id);
             return (
               <Link key={g.id} href={`/gdg/${g.id}`} className="group">
-                <Card className="h-full transition group-hover:border-line-strong group-hover:bg-white/[0.05]">
+                <Card className="h-full transition group-hover:border-line-strong group-hover:bg-tint/[0.05]">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -102,7 +107,7 @@ export default function GdgPage() {
                         <UserRound size={14} /> {g.leader_name}
                       </p>
                     </div>
-                    <Badge color="blue">{g.target_kategori}</Badge>
+                    <Badge color="blue">{labelGrup(g)}</Badge>
                   </div>
                   <div className="mt-5 flex items-end justify-between">
                     <div>
@@ -122,6 +127,11 @@ export default function GdgPage() {
                           )}
                         </div>
                         {hadir[s.id] ? <div className="text-success">{hadir[s.id]} hadir</div> : null}
+                        {s.disimpan_at && (
+                          <div className="mt-0.5 inline-flex items-center gap-1 text-success">
+                            <CheckCircle2 size={12} /> tersimpan
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

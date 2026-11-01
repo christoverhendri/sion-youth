@@ -3,6 +3,7 @@
 import { LogIn } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/theme";
 import { Button, ErrorText, Field } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { usernameToEmail } from "@/lib/supabase/env";
@@ -30,6 +31,9 @@ export default function LoginPage() {
 
   return (
     <div className="app-glow grid min-h-screen place-items-center p-4">
+      <div className="fixed right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
       <form onSubmit={submit} className="glass w-full max-w-sm space-y-5 rounded-3xl p-8">
         <div className="text-center">
           <div className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-[#6d8dff] to-[#3a4fd8] shadow-[0_8px_30px_-6px_rgba(79,124,255,0.8)]">

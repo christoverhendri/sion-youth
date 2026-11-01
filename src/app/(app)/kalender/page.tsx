@@ -85,10 +85,10 @@ export default function KalenderPage() {
               <Button size="sm" onClick={() => setBulan(firstOfMonth())}>
                 Hari ini
               </Button>
-              <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setBulan(addMonths(bulan, -1))}>
+              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, -1))}>
                 <ChevronLeft size={18} />
               </button>
-              <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setBulan(addMonths(bulan, 1))}>
+              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, 1))}>
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -99,7 +99,7 @@ export default function KalenderPage() {
         <div className="overflow-x-auto">
           <div className="grid min-w-[640px] grid-cols-7 overflow-hidden rounded-xl border border-line">
             {HARI.map((h) => (
-              <div key={h} className="border-b border-line bg-white/[0.03] px-2 py-2 text-center text-xs text-muted">
+              <div key={h} className="border-b border-line bg-tint/[0.03] px-2 py-2 text-center text-xs text-muted">
                 {h}
               </div>
             ))}
@@ -153,11 +153,11 @@ export default function KalenderPage() {
           sub="Semua program kerja dikelompokkan per bulan"
           action={
             <div className="flex items-center gap-1">
-              <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setTahun(tahun - 1)}>
+              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setTahun(tahun - 1)}>
                 <ChevronLeft size={16} />
               </button>
               <span className="px-1 text-sm font-medium">{tahun}</span>
-              <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setTahun(tahun + 1)}>
+              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setTahun(tahun + 1)}>
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -305,7 +305,7 @@ function ActivityModal({
                 type="button"
                 key={k}
                 onClick={() => set("warna", k)}
-                className={cn("h-7 w-7 rounded-full border-2", f.warna === k ? "border-white" : "border-transparent")}
+                className={cn("h-7 w-7 rounded-full border-2", f.warna === k ? "border-ink" : "border-transparent")}
                 style={{ background: c }}
                 aria-label={k}
               />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Donut, HBar, SERIES, TrendArea } from "@/components/charts";
+import { Donut, HBar, TrendArea } from "@/components/charts";
 import { Badge, Card, CardTitle, Empty, Loading, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAll, loadKehadiran, trenKehadiran, type Kehadiran } from "@/lib/data";
@@ -112,12 +112,12 @@ export default function AnalisisPage() {
 
         <Card>
           <CardTitle sub="Jumlah jemaat yang sudah bisa melayani di bidang ini">Kemampuan penatalayan</CardTitle>
-          <HBar data={a.bisa} color={SERIES[2]} />
+          <HBar data={a.bisa} series={2} />
         </Card>
 
         <Card>
           <CardTitle sub="Tertarik tapi belum bisa → acuan topik training / workshop">Mau belajar pelayanan</CardTitle>
-          <HBar data={a.mauBelajar} color={SERIES[3]} />
+          <HBar data={a.mauBelajar} series={3} />
         </Card>
 
         <Card>
@@ -248,7 +248,7 @@ export default function AnalisisPage() {
                       )}
                     </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                  <div className="h-2 overflow-hidden rounded-full bg-tint/5">
                     <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
@@ -259,12 +259,12 @@ export default function AnalisisPage() {
 
         <Card>
           <CardTitle sub="Total sepanjang waktu, untuk melihat channel yang paling efektif">Kenal Sion dari mana</CardTitle>
-          <HBar data={a.sumber} color={SERIES[6]} />
+          <HBar data={a.sumber} series={6} />
         </Card>
 
         <Card>
           <CardTitle sub="Yang paling banyak mengajak teman baru, layak diapresiasi 🙌">Top pengajak</CardTitle>
-          <HBar data={a.inviter} max={8} color={SERIES[4]} />
+          <HBar data={a.inviter} max={8} series={4} />
         </Card>
 
         <Card>

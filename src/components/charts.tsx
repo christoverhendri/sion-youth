@@ -14,12 +14,32 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTheme } from "./theme";
 import { Empty } from "./ui";
 
-// Palet kategorikal (versi mode gelap), urutan tetap — tidak diputar ulang.
-export const SERIES = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"];
-const AXIS = "#8b94b0";
-const GRID = "rgba(255,255,255,0.06)";
+// Palet kategorikal, urutan tetap (tidak diputar ulang). Tiap mode punya step warnanya sendiri.
+const PALET = {
+  dark: {
+    series: ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"],
+    axis: "#8b94b0",
+    tick: "#c3c9db",
+    grid: "rgba(255,255,255,0.06)",
+    cursor: "rgba(255,255,255,0.04)",
+    surface: "#0e1529",
+  },
+  light: {
+    series: ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"],
+    axis: "#5b6478",
+    tick: "#374151",
+    grid: "rgba(15,23,42,0.07)",
+    cursor: "rgba(15,23,42,0.04)",
+    surface: "#ffffff",
+  },
+};
+
+function usePalet() {
+  return PALET[useTheme()];
+}
 
 function Tip({
   active,
@@ -47,37 +67,40 @@ function Tip({
 /** Bar horizontal satu seri — cocok untuk label kategori yang panjang */
 export function HBar({
   data,
-  color = SERIES[0],
+  series = 0,
   unit,
   max = 12,
 }: {
   data: { name: string; value: number }[];
-  color?: string;
+  /** indeks warna di palet kategorikal */
+  series?: number;
   unit?: string;
   max?: number;
 }) {
+  const p = usePalet();
+  const color = p.series[series];
   if (!data.length) return <Empty>Belum ada data.</Empty>;
   const rows = data.slice(0, max);
   return (
     <ResponsiveContainer width="100%" height={Math.max(120, rows.length * 34 + 20)}>
       <BarChart data={rows} layout="vertical" margin={{ left: 0, right: 28, top: 4, bottom: 4 }} barCategoryGap={6}>
-        <CartesianGrid horizontal={false} stroke={GRID} />
-        <XAxis type="number" allowDecimals={false} tick={{ fill: AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <CartesianGrid horizontal={false} stroke={p.grid} />
+        <XAxis type="number" allowDecimals={false} tick={{ fill: p.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
         <YAxis
           type="category"
           dataKey="name"
           width={150}
-          tick={{ fill: "#c3c9db", fontSize: 12 }}
+          tick={{ fill: p.tick, fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip content={<Tip unit={unit} />} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
+        <Tooltip content={<Tip unit={unit} />} cursor={{ fill: p.cursor }} />
         <Bar
           dataKey="value"
           fill={color}
           radius={[0, 4, 4, 0]}
           maxBarSize={22}
-          label={{ position: "right", fill: "#c3c9db", fontSize: 11 }}
+          label={{ position: "right", fill: p.tick, fontSize: 11 }}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -86,6 +109,8 @@ export function HBar({
 
 /** Donut dengan legenda + persentase (identitas tidak hanya lewat warna) */
 export function Donut({ data, unit }: { data: { name: string; value: number }[]; unit?: string }) {
+  const p = usePalet();
+  const SERIES = p.series;
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!total) return <Empty>Belum ada data.</Empty>;
   return (
@@ -100,7 +125,7 @@ export function Donut({ data, unit }: { data: { name: string; value: number }[];
               innerRadius={52}
               outerRadius={80}
               paddingAngle={2}
-              stroke="#0e1529"
+              stroke={p.surface}
               strokeWidth={2}
             >
               {data.map((d, i) => (
@@ -133,6 +158,8 @@ export function Donut({ data, unit }: { data: { name: string; value: number }[];
 
 /** Tren kehadiran per minggu */
 export function TrendArea({ data, height = 220 }: { data: { name: string; value: number }[]; height?: number }) {
+  const p = usePalet();
+  const SERIES = p.series;
   if (!data.length) return <Empty>Belum ada data absensi.</Empty>;
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -143,17 +170,17 @@ export function TrendArea({ data, height = 220 }: { data: { name: string; value:
             <stop offset="100%" stopColor={SERIES[0]} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke={GRID} />
-        <XAxis dataKey="name" tick={{ fill: AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-        <YAxis allowDecimals={false} tick={{ fill: AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-        <Tooltip content={<Tip />} cursor={{ stroke: "rgba(255,255,255,0.2)" }} />
+        <CartesianGrid vertical={false} stroke={p.grid} />
+        <XAxis dataKey="name" tick={{ fill: p.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <YAxis allowDecimals={false} tick={{ fill: p.axis, fontSize: 11 }} axisLine={false} tickLine={false} />
+        <Tooltip content={<Tip />} cursor={{ stroke: p.axis }} />
         <Area
           type="monotone"
           dataKey="value"
           stroke={SERIES[0]}
           strokeWidth={2}
           fill="url(#trend)"
-          dot={{ r: 3, fill: SERIES[0], stroke: "#0e1529", strokeWidth: 2 }}
+          dot={{ r: 3, fill: SERIES[0], stroke: p.surface, strokeWidth: 2 }}
           activeDot={{ r: 5 }}
         />
       </AreaChart>

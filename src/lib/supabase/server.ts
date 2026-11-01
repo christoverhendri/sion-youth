@@ -26,7 +26,8 @@ export function createAdminClient() {
   return createAdmin(SUPABASE_URL, key, { auth: { persistSession: false } });
 }
 
-export type Role = "pengurus" | "penatalayan";
+export type Role = "pengurus" | "penatalayan" | "gdg_leader";
+export type Me = { id: string; username: string; full_name: string | null; role: Role; gdg_group_id: string | null };
 
 export async function getSessionProfile() {
   const supabase = await createClient();
@@ -36,9 +37,9 @@ export async function getSessionProfile() {
   if (!user) return null;
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, username, full_name, role")
+    .select("id, username, full_name, role, gdg_group_id")
     .eq("id", user.id)
     .single();
   if (!profile) return null;
-  return profile as { id: string; username: string; full_name: string | null; role: Role };
+  return profile as Me;
 }

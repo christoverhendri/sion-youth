@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CakeSlice, CalendarDays, ClipboardCheck, UserPlus, Users } from "lucide-react";
+import { AlertTriangle, CakeSlice, CalendarDays, CheckCircle2, CircleDashed, ClipboardCheck, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TrendArea } from "@/components/charts";
@@ -9,7 +9,7 @@ import { useMe } from "@/components/role";
 import { Badge, Card, CardTitle, Empty, Loading, Stat } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { loadKehadiran, trenKehadiran, type Kehadiran } from "@/lib/data";
-import type { AbsenRow, Activity, GdgGroup, Jemaat } from "@/lib/types";
+import type { AbsenRow, Activity, GdgGroup, GdgSession, IbadahSession, Jemaat } from "@/lib/types";
 import {
   ABSEN_KUNING,
   ABSEN_MERAH,
@@ -17,6 +17,7 @@ import {
   firstOfMonth,
   fmtDate,
   isoDate,
+  mingguIni,
   parseDate,
   pesanUltah,
   umur,
@@ -31,23 +32,32 @@ export default function DashboardPage() {
   const [keh, setKeh] = useState<Kehadiran>({ sesi: [], hadir: [] });
   const [level, setLevel] = useState<"merah" | "semua">("merah");
   const [reload, setReload] = useState(0);
+  const [ibadah, setIbadah] = useState<IbadahSession | null>(null);
+  const [gdgSesi, setGdgSesi] = useState<GdgSession[]>([]);
 
   useEffect(() => {
     const sb = createClient();
     const today = isoDate(new Date());
     Promise.all([
+      sb.rpc("ensure_gdg_sessions", { p_bulan: firstOfMonth() }),
+      sb.rpc("ensure_ibadah_sessions", { p_dari: mingguIni(), p_sampai: mingguIni() }),
+    ]).then(() => Promise.all([
       sb.from("jemaat").select("*"),
       sb.from("v_absen_ibadah").select("*").gte("absen_beruntun", ABSEN_KUNING).order("absen_beruntun", { ascending: false }),
       sb.from("gdg_groups").select("*"),
       sb.from("activities").select("*").gte("selesai", today).neq("status", "batal").order("mulai").limit(5),
       loadKehadiran(sb, 12),
-    ]).then(([j, a, g, ac, k]) => {
+      sb.from("ibadah_sessions").select("*").eq("tanggal", mingguIni()).maybeSingle(),
+      sb.from("gdg_sessions").select("*").eq("bulan", firstOfMonth()),
+    ]).then(([j, a, g, ac, k, ib, gs]) => {
+      setIbadah(ib.data as IbadahSession | null);
+      setGdgSesi((gs.data as GdgSession[]) ?? []);
       setJemaat((j.data as Jemaat[]) ?? []);
       setAbsen((a.data as AbsenRow[]) ?? []);
       setGroups((g.data as GdgGroup[]) ?? []);
       setActs((ac.data as Activity[]) ?? []);
       setKeh(k);
-    });
+    }));
   }, [reload]);
 
   const aktif = useMemo(() => (jemaat ?? []).filter((j) => j.status === "aktif"), [jemaat]);
@@ -100,9 +110,36 @@ export default function DashboardPage() {
         />
       </div>
 
+      <Card className="mb-5 py-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Status absensi</span>
+          <StatusAbsen
+            href="/absensi"
+            label={`Ibadah ${fmtDate(mingguIni(), { year: undefined })}`}
+            sesi={ibadah}
+            catatan={ibadah && ibadah.status !== "sion" ? (ibadah.status === "gabung" ? "Gabung umum" : "Libur") : null}
+          />
+          {groups
+            .filter((g) => g.is_active)
+            .map((g) => {
+              const s = gdgSesi.find((x) => x.group_id === g.id) ?? null;
+              const lewat = s && s.tanggal <= isoDate(new Date());
+              return (
+                <StatusAbsen
+                  key={g.id}
+                  href={`/gdg/${g.id}`}
+                  label={g.nama}
+                  sesi={s}
+                  catatan={!s ? null : s.status === "batal" ? "Batal" : !lewat ? `Jadwal ${fmtDate(s.tanggal, { year: undefined })}` : null}
+                />
+              );
+            })}
+        </div>
+      </Card>
+
       {review > 0 && (
         <Link href="/jemaat" className="mb-5 block">
-          <Card className="flex items-center gap-3 border-warning/30 py-3 text-sm hover:bg-white/[0.05]">
+          <Card className="flex items-center gap-3 border-warning/30 py-3 text-sm hover:bg-tint/[0.05]">
             <Badge color="yellow">{review}</Badge>
             Data jemaat baru dari form / usher belum dicek pengurus. Buka Data Jemaat → &quot;Perlu review&quot;.
           </Card>
@@ -121,7 +158,7 @@ export default function DashboardPage() {
                     onClick={() => setLevel(l)}
                     className={cn(
                       "rounded-md px-2.5 py-1",
-                      level === l ? "bg-white/10 text-ink" : "text-muted hover:text-ink",
+                      level === l ? "bg-tint/10 text-ink" : "text-muted hover:text-ink",
                     )}
                   >
                     {l === "merah" ? `≥ ${ABSEN_MERAH} minggu` : `≥ ${ABSEN_KUNING} minggu`}
@@ -234,5 +271,33 @@ export default function DashboardPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+function StatusAbsen({
+  href,
+  label,
+  sesi,
+  catatan,
+}: {
+  href: string;
+  label: string;
+  sesi: { disimpan_at: string | null; disimpan_nama: string | null } | null;
+  catatan: string | null;
+}) {
+  return (
+    <Link href={href} className="inline-flex items-center gap-2 hover:text-primary" title={sesi?.disimpan_nama ?? ""}>
+      {catatan ? (
+        <CircleDashed size={16} className="text-faint" />
+      ) : sesi?.disimpan_at ? (
+        <CheckCircle2 size={16} className="text-success" />
+      ) : (
+        <AlertTriangle size={16} className="text-warning" />
+      )}
+      <span>{label}</span>
+      <span className="text-xs text-muted">
+        {catatan ?? (sesi?.disimpan_at ? `disimpan ${sesi.disimpan_nama ?? ""}` : "belum disimpan")}
+      </span>
+    </Link>
   );
 }

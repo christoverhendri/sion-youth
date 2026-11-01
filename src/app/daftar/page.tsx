@@ -3,6 +3,7 @@
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { emptyDraft, JemaatFields, draftToRow, type JemaatDraft } from "@/components/jemaat-form";
+import { ThemeToggle } from "@/components/theme";
 import { Button, ErrorText } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 
@@ -55,6 +56,9 @@ export default function DaftarPage() {
 
   return (
     <div className="app-glow min-h-screen px-4 py-10">
+      <div className="fixed right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
       <form onSubmit={submit} className="glass mx-auto max-w-2xl space-y-8 rounded-3xl p-6 sm:p-10">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Sion Youth</p>

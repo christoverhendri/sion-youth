@@ -6,17 +6,19 @@ Next.js + Supabase, di-deploy ke Vercel.
 ## Fitur
 
 - **Data jemaat**: data master, form pendaftaran publik (`/daftar`), aktif/nonaktif dengan alasan, follow-up WhatsApp + catatan.
-- **Absensi ibadah**: usher centang hadir dari HP. Pengurus bisa ubah status minggu: *Ibadah Sion* / *Gabung Umum* / *Libur* (minggu gabung/libur tidak ada absensi dan tidak dihitung).
+- **Absensi ibadah**: usher centang hadir dari HP, lalu **Simpan absensi** (daftar dikunci, bisa dibuka lagi untuk update). Pengurus bisa ubah status minggu: *Ibadah Sion* / *Gabung Umum* / *Libur* (minggu gabung/libur tidak ada absensi dan tidak dihitung).
+- **Laporan absensi**: rekap per minggu & per jemaat, export CSV (format seperti spreadsheet lama).
 - **Peringatan lama tidak datang**: 🟡 2 minggu, 🔴 4 minggu ibadah Sion berturut-turut.
-- **GDG**: jemaat aktif otomatis masuk grup sesuai jenjang (Kuliah → Kerja), pilih grup dengan anggota paling sedikit. Pindah manual tidak akan ditimpa sistem. Jadwal otomatis Sabtu minggu ke-2, bisa diubah/dibatalkan per bulan.
+- **GDG**: grup punya jenjang + jenis kelamin (mis. *SMP & SMA · Cowok*). Jemaat aktif otomatis masuk grup yang cocok dengan anggota paling sedikit. Pindah manual tidak akan ditimpa sistem. Jadwal otomatis Sabtu minggu ke-2, bisa diubah/dibatalkan per bulan.
 - **Analisis**: hobi, kemampuan & minat pelayanan, kuliah dalam/luar negeri, proporsi jenjang, absen GDG per grup, jemaat baru per bulan, tren kehadiran, retensi, top pengajak, domisili, kandidat penatalayan.
 - **Kalender**: kalender bulanan + timeline proker per bulan.
-- **Role**: `pengurus` (akses penuh) dan `penatalayan` (hanya absensi). Data pribadi dilindungi Row Level Security di database.
+- **Role**: `pengurus` (akses penuh), `penatalayan` (hanya absensi ibadah), `gdg_leader` (absensi ibadah + absensi & anggota grup GDG-nya saja). Data pribadi dilindungi Row Level Security di database.
+- **Dark / light mode**: tombol matahari/bulan di sidebar.
 
 ## Setup (sekali saja)
 
 1. **Buat project Supabase** di https://supabase.com (region Singapore).
-2. Buka **SQL Editor**, tempel isi `supabase/migrations/20261101000001_init.sql`, lalu **Run**.
+2. Buka **SQL Editor**, jalankan semua file di `supabase/migrations/` berurutan.
 3. Salin `.env.example` → `.env.local`, isi dari *Project Settings → API*:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (atau anon key)

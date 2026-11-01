@@ -9,13 +9,20 @@ async function wajibPengurus() {
   return me;
 }
 
-export type Akun = { id: string; username: string; full_name: string | null; role: Role; last_sign_in_at: string | null };
+export type Akun = {
+  id: string;
+  username: string;
+  full_name: string | null;
+  role: Role;
+  gdg_group_id: string | null;
+  last_sign_in_at: string | null;
+};
 
 export async function listAkun(): Promise<Akun[]> {
   await wajibPengurus();
   const admin = createAdminClient();
   const [{ data: profiles }, { data: users }] = await Promise.all([
-    admin.from("profiles").select("id, username, full_name, role").order("role").order("username"),
+    admin.from("profiles").select("id, username, full_name, role, gdg_group_id").order("role").order("username"),
     admin.auth.admin.listUsers({ perPage: 200 }),
   ]);
   return (profiles ?? []).map((p) => ({
@@ -24,16 +31,28 @@ export async function listAkun(): Promise<Akun[]> {
   }));
 }
 
-export async function buatAkun(input: { username: string; full_name: string; role: Role; password: string }) {
+export async function buatAkun(input: {
+  username: string;
+  full_name: string;
+  role: Role;
+  password: string;
+  gdg_group_id: string;
+}) {
   await wajibPengurus();
   const username = input.username.trim().toLowerCase();
   if (!/^[a-z0-9._-]{3,30}$/.test(username)) return { error: "Username 3-30 karakter: huruf kecil, angka, titik, - atau _" };
   if (input.password.length < 8) return { error: "Password minimal 8 karakter" };
+  if (input.role === "gdg_leader" && !input.gdg_group_id) return { error: "Pilih grup GDG untuk leader" };
   const { error } = await createAdminClient().auth.admin.createUser({
     email: usernameToEmail(username),
     password: input.password,
     email_confirm: true,
-    user_metadata: { username, full_name: input.full_name || null, role: input.role },
+    user_metadata: {
+      username,
+      full_name: input.full_name || null,
+      role: input.role,
+      gdg_group_id: input.role === "gdg_leader" ? input.gdg_group_id : null,
+    },
   });
   if (error) return { error: error.message.includes("already") ? "Username sudah dipakai" : error.message };
   return { error: null };

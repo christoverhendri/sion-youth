@@ -1,44 +1,79 @@
 @import "tailwindcss";
 
+/* Tema gelap (default) */
 :root {
   --bg: #060a17;
-  --bg-2: #0b1124;
   --surface: rgba(255, 255, 255, 0.035);
   --surface-2: rgba(255, 255, 255, 0.06);
   --surface-solid: #0e1529;
+  --sidebar: rgba(7, 12, 28, 0.82);
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
   --text: #e8ecf7;
   --muted: #8b94b0;
   --faint: #5d6684;
+  --tint: 255 255 255; /* warna overlay hover/selected */
   --primary: #4f7cff;
   --primary-2: #3a64e8;
   --success: #34d399;
   --warning: #fbbf24;
   --danger: #f87171;
+  --badge-blue: #8fb0ff;
+  --badge-purple: #b9a1ff;
+  --glass-top: rgba(255, 255, 255, 0.05);
+  --glass-bottom: rgba(255, 255, 255, 0.02);
+  --glow-1: rgba(79, 124, 255, 0.18);
+  --glow-2: rgba(109, 76, 255, 0.14);
+  color-scheme: dark;
+}
+
+/* Tema terang */
+:root[data-theme="light"] {
+  --bg: #f3f5fa;
+  --surface: rgba(15, 23, 42, 0.025);
+  --surface-2: #ffffff;
+  --surface-solid: #ffffff;
+  --sidebar: rgba(255, 255, 255, 0.85);
+  --border: rgba(15, 23, 42, 0.09);
+  --border-strong: rgba(15, 23, 42, 0.16);
+  --text: #111827;
+  --muted: #5b6478;
+  --faint: #8a93a6;
+  --tint: 15 23 42;
+  --primary: #3a64e8;
+  --primary-2: #2f55d4;
+  --success: #059669;
+  --warning: #b45309;
+  --danger: #dc2626;
+  --badge-blue: #2f55d4;
+  --badge-purple: #6d28d9;
+  --glass-top: rgba(255, 255, 255, 0.95);
+  --glass-bottom: rgba(255, 255, 255, 0.8);
+  --glow-1: rgba(79, 124, 255, 0.12);
+  --glow-2: rgba(139, 92, 246, 0.08);
+  color-scheme: light;
 }
 
 @theme inline {
   --color-bg: var(--bg);
-  --color-bg-2: var(--bg-2);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-surface-solid: var(--surface-solid);
+  --color-sidebar: var(--sidebar);
   --color-line: var(--border);
   --color-line-strong: var(--border-strong);
   --color-ink: var(--text);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
+  --color-tint: rgb(var(--tint));
   --color-primary: var(--primary);
   --color-primary-2: var(--primary-2);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-badge-blue: var(--badge-blue);
+  --color-badge-purple: var(--badge-purple);
   --font-sans: var(--font-jakarta);
-}
-
-html {
-  color-scheme: dark;
 }
 
 body {
@@ -51,20 +86,23 @@ body {
 /* Cahaya biru di latar, seperti referensi desain */
 .app-glow {
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(79, 124, 255, 0.18), transparent 60%),
-    radial-gradient(700px 500px at -10% 110%, rgba(109, 76, 255, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 85% -10%, var(--glow-1), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, var(--glow-2), transparent 60%),
     var(--bg);
 }
 
 .glass {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
   border: 1px solid var(--border);
   backdrop-filter: blur(14px);
+}
+:root[data-theme="light"] .glass {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
 }
 
 .field {
   width: 100%;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgb(var(--tint) / 0.04);
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   padding: 0.6rem 0.85rem;
@@ -72,6 +110,9 @@ body {
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.15s, background 0.15s;
+}
+:root[data-theme="light"] .field {
+  background: #ffffff;
 }
 .field:focus {
   border-color: var(--primary);
@@ -84,11 +125,30 @@ select.field option {
   background: var(--surface-solid);
 }
 
+/* Ganti tema: lingkaran menyebar dari tombol (lihat setTheme di components/theme.tsx) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* Ikon matahari ↔ bulan */
+.theme-anim {
+  transition:
+    transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.4s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .theme-anim {
+    transition: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--tint) / 0.12);
   border-radius: 8px;
 }

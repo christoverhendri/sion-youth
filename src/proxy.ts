@@ -30,13 +30,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Penatalayan (usher) hanya boleh membuka halaman absensi.
+  // Penatalayan (usher) hanya boleh membuka absensi; GDG leader absensi + grup GDG-nya.
   // Data tetap dilindungi RLS di database; ini hanya pengalihan halaman.
   if (user && !isPublic && !path.startsWith("/absensi")) {
-    const { data } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-    if (data?.role !== "pengurus") {
+    const { data } = await supabase.from("profiles").select("role, gdg_group_id").eq("id", user.id).single();
+    const leaderOk = data?.role === "gdg_leader" && path.startsWith("/gdg");
+    if (data?.role !== "pengurus" && !leaderOk) {
       const url = request.nextUrl.clone();
-      url.pathname = "/absensi";
+      url.pathname = data?.role === "gdg_leader" && data.gdg_group_id ? `/gdg/${data.gdg_group_id}` : "/absensi";
       return NextResponse.redirect(url);
     }
   }

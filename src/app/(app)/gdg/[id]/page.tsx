@@ -6,9 +6,11 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { FollowUpButton } from "@/components/followup";
 import { GroupModal } from "@/components/group-modal";
-import { Badge, Button, Card, CardTitle, Empty, Field, Loading } from "@/components/ui";
+import { useMe } from "@/components/role";
+import { SimpanBar } from "@/components/simpan-bar";
+import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Loading } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import type { GdgGroup, GdgSession, Jemaat } from "@/lib/types";
+import { labelGrup, type GdgGroup, type GdgSession, type Jemaat } from "@/lib/types";
 import { addMonths, cn, firstOfMonth, fmtDate, fmtMonth, isoDate, jenjang } from "@/lib/utils";
 
 type Member = Pick<Jemaat, "id" | "nama" | "no_hp" | "no_hp_ortu" | "status_akademik" | "kelas" | "gdg_manual">;
@@ -23,6 +25,8 @@ function sabtuKedua(bulan: string) {
 
 export default function GdgDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const me = useMe();
+  const pengurus = me.role === "pengurus";
   const [group, setGroup] = useState<GdgGroup | null>(null);
   const [groups, setGroups] = useState<GdgGroup[]>([]);
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -31,6 +35,8 @@ export default function GdgDetailPage() {
   const [sesi, setSesi] = useState<GdgSession | null>(null);
   const [hadir, setHadir] = useState<Set<string>>(new Set());
   const [edit, setEdit] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   const loadGroup = useCallback(async () => {
     const sb = createClient();
@@ -71,14 +77,26 @@ export default function GdgDetailPage() {
 
   async function toggle(jid: string) {
     if (!sesi) return;
-    const sb = createClient();
+    setError("");
     const on = hadir.has(jid);
     const next = new Set(hadir);
     if (on) next.delete(jid);
     else next.add(jid);
     setHadir(next);
-    if (on) await sb.from("gdg_attendance").delete().eq("session_id", sesi.id).eq("jemaat_id", jid);
-    else await sb.from("gdg_attendance").insert({ session_id: sesi.id, jemaat_id: jid });
+    const { error } = await createClient().rpc("set_hadir_gdg", { p_session: sesi.id, p_jemaat: jid, p_hadir: !on });
+    if (error) {
+      setError(error.message);
+      loadSesi();
+    }
+  }
+
+  async function simpan(p: boolean) {
+    if (!sesi) return;
+    setBusy(true);
+    const { error } = await createClient().rpc("simpan_absensi_gdg", { p_session: sesi.id, p_simpan: p });
+    setBusy(false);
+    if (error) return setError(error.message);
+    await loadSesi();
     loadGroup();
   }
 
@@ -101,44 +119,53 @@ export default function GdgDetailPage() {
 
   if (!group || !members) return <Loading />;
   const defaultTgl = sabtuKedua(bulan);
-  const isPast = sesi && sesi.tanggal <= isoDate(new Date());
+  const terkunci = !!sesi?.disimpan_at;
+  const bisaAbsen = !!sesi && sesi.status === "terjadwal" && !terkunci;
 
   return (
     <>
-      <Link href="/gdg" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
-        <ArrowLeft size={15} /> Semua grup
-      </Link>
+      {pengurus && (
+        <Link href="/gdg" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
+          <ArrowLeft size={15} /> Semua grup
+        </Link>
+      )}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold">{group.nama}</h1>
-            <Badge color="blue">{group.target_kategori}</Badge>
+            <Badge color="blue">{labelGrup(group)}</Badge>
             {!group.is_active && <Badge color="red">nonaktif</Badge>}
           </div>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
             <UserRound size={14} /> Leader: {group.leader_name} · {members.length} anggota aktif
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setEdit(true)}>
-            <Pencil size={15} /> Edit grup
-          </Button>
-          <Button variant={group.is_active ? "danger" : "success"} onClick={toggleActive}>
-            {group.is_active ? "Nonaktifkan grup" : "Aktifkan grup"}
-          </Button>
-        </div>
+        {pengurus && (
+          <div className="flex gap-2">
+            <Button onClick={() => setEdit(true)}>
+              <Pencil size={15} /> Edit grup
+            </Button>
+            <Button variant={group.is_active ? "danger" : "success"} onClick={toggleActive}>
+              {group.is_active ? "Nonaktifkan grup" : "Aktifkan grup"}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
         <Card className="lg:col-span-2">
           <CardTitle
-            sub="Default Sabtu minggu ke-2. Bisa diubah kalau hasil diskusi pindah hari."
+            sub={
+              pengurus
+                ? "Default Sabtu minggu ke-2. Bisa diubah kalau hasil diskusi pindah hari."
+                : "Default Sabtu minggu ke-2. Perubahan jadwal diatur pengurus."
+            }
             action={
               <div className="flex items-center gap-1">
-                <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setBulan(addMonths(bulan, -1))}>
+                <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, -1))}>
                   <ChevronLeft size={16} />
                 </button>
-                <button className="rounded-lg p-1.5 hover:bg-white/10" onClick={() => setBulan(addMonths(bulan, 1))}>
+                <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, 1))}>
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -163,41 +190,46 @@ export default function GdgDetailPage() {
                 {sesi.tanggal !== defaultTgl && (
                   <div className="mt-1 text-xs text-warning">Diubah dari jadwal default ({fmtDate(defaultTgl)})</div>
                 )}
+                {sesi.catatan && <div className="mt-1 text-xs text-muted">{sesi.catatan}</div>}
               </div>
-              <Field label="Ubah tanggal">
-                <input
-                  type="date"
-                  className="field"
-                  value={sesi.tanggal}
-                  min={bulan}
-                  onChange={(e) => e.target.value && updateSesi({ tanggal: e.target.value })}
-                />
-              </Field>
-              <Field label="Catatan">
-                <input
-                  key={sesi.id}
-                  className="field"
-                  placeholder="Mis. pindah karena ujian sekolah"
-                  defaultValue={sesi.catatan ?? ""}
-                  onBlur={(e) => updateSesi({ catatan: e.target.value || null })}
-                />
-              </Field>
-              <div className="flex flex-wrap gap-2">
-                {sesi.tanggal !== defaultTgl && (
-                  <Button size="sm" onClick={() => updateSesi({ tanggal: defaultTgl })}>
-                    <RotateCcw size={13} /> Kembalikan ke Sabtu ke-2
-                  </Button>
-                )}
-                {sesi.status === "batal" ? (
-                  <Button size="sm" variant="success" onClick={() => updateSesi({ status: "terjadwal" })}>
-                    Jadwalkan lagi
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="danger" onClick={() => updateSesi({ status: "batal" })}>
-                    Batalkan bulan ini
-                  </Button>
-                )}
-              </div>
+              {pengurus && (
+                <>
+                  <Field label="Ubah tanggal">
+                    <input
+                      type="date"
+                      className="field"
+                      value={sesi.tanggal}
+                      min={bulan}
+                      onChange={(e) => e.target.value && updateSesi({ tanggal: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Catatan">
+                    <input
+                      key={sesi.id}
+                      className="field"
+                      placeholder="Mis. pindah karena ujian sekolah"
+                      defaultValue={sesi.catatan ?? ""}
+                      onBlur={(e) => updateSesi({ catatan: e.target.value || null })}
+                    />
+                  </Field>
+                  <div className="flex flex-wrap gap-2">
+                    {sesi.tanggal !== defaultTgl && (
+                      <Button size="sm" onClick={() => updateSesi({ tanggal: defaultTgl })}>
+                        <RotateCcw size={13} /> Kembalikan ke Sabtu ke-2
+                      </Button>
+                    )}
+                    {sesi.status === "batal" ? (
+                      <Button size="sm" variant="success" onClick={() => updateSesi({ status: "terjadwal" })}>
+                        Jadwalkan lagi
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="danger" onClick={() => updateSesi({ status: "batal" })}>
+                        Batalkan bulan ini
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </Card>
@@ -207,28 +239,43 @@ export default function GdgDetailPage() {
             sub={
               sesi?.status === "batal"
                 ? "GDG bulan ini batal, tidak ada absensi."
-                : isPast
-                  ? "Centang anggota yang hadir."
-                  : "Bisa dicentang saat hari H."
+                : terkunci
+                  ? "Sudah disimpan."
+                  : sesi && sesi.tanggal <= isoDate(new Date())
+                    ? "Centang anggota yang hadir, lalu klik Simpan."
+                    : "Bisa dicentang saat hari H."
             }
             action={sesi && <Badge color="green">{hadir.size} hadir</Badge>}
           >
             Absensi GDG
           </CardTitle>
+          {sesi && sesi.status === "terjadwal" && terkunci && (
+            <SimpanBar
+              disimpanAt={sesi.disimpan_at}
+              disimpanNama={sesi.disimpan_nama}
+              jumlah={hadir.size}
+              busy={busy}
+              onSimpan={() => simpan(true)}
+              onBuka={() => simpan(false)}
+            />
+          )}
+          <ErrorText>{error}</ErrorText>
           {members.length === 0 ? (
             <Empty>Belum ada anggota.</Empty>
           ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {members.map((m) => {
                 const on = hadir.has(m.id);
                 return (
                   <button
                     key={m.id}
-                    disabled={!sesi || sesi.status === "batal"}
+                    disabled={!bisaAbsen}
                     onClick={() => toggle(m.id)}
                     className={cn(
-                      "flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition disabled:opacity-40",
+                      "flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition",
                       on ? "border-success/40 bg-success/10" : "border-line bg-surface hover:border-line-strong",
+                      !bisaAbsen && "cursor-default",
+                      !bisaAbsen && !on && "opacity-50",
                     )}
                   >
                     <span
@@ -245,12 +292,28 @@ export default function GdgDetailPage() {
               })}
             </div>
           )}
+          {sesi && bisaAbsen && (
+            <SimpanBar
+              disimpanAt={null}
+              disimpanNama={null}
+              jumlah={hadir.size}
+              busy={busy}
+              onSimpan={() => simpan(true)}
+              onBuka={() => simpan(false)}
+            />
+          )}
         </Card>
       </div>
 
       <Card className="mt-5 p-0">
         <div className="p-5 pb-0">
-          <CardTitle sub="Dihitung dari sesi GDG grup ini yang sudah lewat. Pindah grup = otomatis jadi manual.">
+          <CardTitle
+            sub={
+              pengurus
+                ? "Dihitung dari sesi GDG grup ini yang sudah lewat. Pindah grup = otomatis jadi manual."
+                : "Dihitung dari sesi GDG grup ini yang sudah lewat."
+            }
+          >
             Anggota & kehadiran
           </CardTitle>
         </div>
@@ -262,7 +325,7 @@ export default function GdgDetailPage() {
                 <th className="px-5 py-3 font-medium">Jenjang</th>
                 <th className="px-5 py-3 font-medium">Kehadiran</th>
                 <th className="px-5 py-3 font-medium">Absen beruntun</th>
-                <th className="px-5 py-3 font-medium">Pindah ke</th>
+                {pengurus && <th className="px-5 py-3 font-medium">Pindah ke</th>}
                 <th className="px-5 py-3" />
               </tr>
             </thead>
@@ -287,19 +350,21 @@ export default function GdgDetailPage() {
                         <span className="text-faint">-</span>
                       )}
                     </td>
-                    <td className="px-5 py-3">
-                      <select
-                        className="field w-auto py-1.5 text-xs"
-                        value={group.id}
-                        onChange={(e) => pindah(m.id, e.target.value)}
-                      >
-                        {groups.map((g) => (
-                          <option key={g.id} value={g.id}>
-                            {g.nama} ({g.target_kategori})
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                    {pengurus && (
+                      <td className="px-5 py-3">
+                        <select
+                          className="field w-auto py-1.5 text-xs"
+                          value={group.id}
+                          onChange={(e) => pindah(m.id, e.target.value)}
+                        >
+                          {groups.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.nama} ({labelGrup(g)})
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    )}
                     <td className="px-5 py-3 text-right">
                       <FollowUpButton jemaat={m} label="WA" />
                     </td>

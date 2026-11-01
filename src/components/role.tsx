@@ -1,9 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { Role } from "@/lib/supabase/server";
-
-type Me = { id: string; username: string; full_name: string | null; role: Role };
+import type { Me } from "@/lib/supabase/server";
 
 const MeContext = createContext<Me | null>(null);
 

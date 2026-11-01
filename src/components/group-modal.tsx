@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { KATEGORI_GDG, type GdgGroup } from "@/lib/types";
-import { Button, ErrorText, Field, Modal } from "./ui";
+import { STATUS_AKADEMIK, type GdgGroup, type StatusAkademik } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import { Button, Chips, ErrorText, Field, Modal } from "./ui";
 
 export function GroupModal({
   value,
@@ -17,20 +18,23 @@ export function GroupModal({
   const g = value && value !== "new" ? value : null;
   const [nama, setNama] = useState("");
   const [leader, setLeader] = useState("");
-  const [kat, setKat] = useState<string>("SMP");
+  const [jenjang, setJenjang] = useState<StatusAkademik[]>(["SMP", "SMA"]);
+  const [jk, setJk] = useState<"" | "L" | "P">("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     setNama(g?.nama ?? "");
     setLeader(g?.leader_name ?? "");
-    setKat(g?.target_kategori ?? "SMP");
+    setJenjang(g?.jenjang ?? ["SMP", "SMA"]);
+    setJk(g?.jenis_kelamin ?? "");
     setError("");
   }, [value, g]);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!jenjang.length) return setError("Pilih minimal satu jenjang.");
     const sb = createClient();
-    const row = { nama, leader_name: leader, target_kategori: kat };
+    const row = { nama, leader_name: leader, jenjang, jenis_kelamin: jk || null };
     const { error } = g
       ? await sb.from("gdg_groups").update(row).eq("id", g.id)
       : await sb.from("gdg_groups").insert(row);
@@ -43,32 +47,41 @@ export function GroupModal({
     <Modal open={!!value} onClose={onClose} title={g ? "Edit grup" : "Grup GDG baru"}>
       <form onSubmit={save} className="space-y-4">
         <Field label="Nama grup">
-          <input className="field" placeholder="Mis. GDG Christo" value={nama} onChange={(e) => setNama(e.target.value)} required />
+          <input className="field" placeholder="Mis. GDG Christoper" value={nama} onChange={(e) => setNama(e.target.value)} required />
         </Field>
         <Field label="Nama GDG leader">
           <input className="field" value={leader} onChange={(e) => setLeader(e.target.value)} required />
         </Field>
-        <Field label="Grup untuk" hint="Jemaat Kuliah otomatis masuk grup Kerja (bisa dipindah manual).">
-          <div className="grid grid-cols-4 gap-2">
-            {KATEGORI_GDG.map((k) => (
+        <Field label="Untuk jenjang (boleh lebih dari satu)">
+          <Chips options={STATUS_AKADEMIK} value={jenjang} onChange={(v) => setJenjang(v as StatusAkademik[])} />
+        </Field>
+        <Field label="Untuk">
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                ["L", "Cowok"],
+                ["P", "Cewek"],
+                ["", "Campur"],
+              ] as const
+            ).map(([v, l]) => (
               <button
                 type="button"
-                key={k}
-                onClick={() => setKat(k)}
-                className={`rounded-xl border py-2 text-sm ${
-                  kat === k ? "border-primary bg-primary/20 text-white" : "border-line bg-surface text-muted"
-                }`}
+                key={v}
+                onClick={() => setJk(v)}
+                className={cn(
+                  "rounded-xl border py-2 text-sm",
+                  jk === v ? "border-primary bg-primary/20 text-ink" : "border-line bg-surface text-muted",
+                )}
               >
-                {k}
+                {l}
               </button>
             ))}
           </div>
         </Field>
-        {!g && (
-          <p className="text-xs text-muted">
-            Jemaat aktif dengan jenjang ini yang belum punya grup akan otomatis dimasukkan ke grup ini.
-          </p>
-        )}
+        <p className="text-xs text-muted">
+          Jemaat aktif yang jenjang & jenis kelaminnya cocok otomatis masuk grup ini (dipilih grup dengan anggota
+          paling sedikit). Pengurus tetap bisa memindah manual.
+        </p>
         <ErrorText>{error}</ErrorText>
         <div className="flex justify-end gap-2">
           <Button type="button" onClick={onClose}>

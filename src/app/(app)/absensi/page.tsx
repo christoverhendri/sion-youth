@@ -1,8 +1,10 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, Minus, Plus, Search, UserPlus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, FileBarChart, Minus, Plus, Search, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMe } from "@/components/role";
+import { SimpanBar } from "@/components/simpan-bar";
 import { Badge, Button, Card, ErrorText, Field, Loading, Modal, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_AKADEMIK, type IbadahSession, type StatusAkademik } from "@/lib/types";
@@ -32,6 +34,13 @@ export default function AbsensiPage() {
   const [jen, setJen] = useState("");
   const [tambah, setTambah] = useState(false);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Dibuka dari laporan: /absensi?tanggal=2026-10-18
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tanggal");
+    if (t && /^\d{4}-\d{2}-\d{2}$/.test(t)) setTanggal(t);
+  }, []);
 
   const load = useCallback(async () => {
     const sb = createClient();
@@ -52,7 +61,7 @@ export default function AbsensiPage() {
   }, [load]);
 
   async function toggle(r: Row) {
-    if (!sesi) return;
+    if (!sesi || sesi.disimpan_at) return;
     setRows((rs) => rs?.map((x) => (x.id === r.id ? { ...x, hadir: !x.hadir } : x)) ?? null);
     const { error } = await createClient().rpc("set_hadir", {
       p_session: sesi.id,
@@ -63,6 +72,16 @@ export default function AbsensiPage() {
       setError(error.message);
       setRows((rs) => rs?.map((x) => (x.id === r.id ? { ...x, hadir: r.hadir } : x)) ?? null);
     }
+  }
+
+  async function simpan(p: boolean) {
+    if (!sesi) return;
+    setBusy(true);
+    const { error } = await createClient().rpc("simpan_absensi_ibadah", { p_session: sesi.id, p_simpan: p });
+    setBusy(false);
+    if (error) return setError(error.message);
+    const { data } = await createClient().from("ibadah_sessions").select("*").eq("id", sesi.id).single();
+    setSesi(data as IbadahSession);
   }
 
   async function setStatus(status: IbadahSession["status"]) {
@@ -92,17 +111,30 @@ export default function AbsensiPage() {
 
   return (
     <>
-      <PageHeader title="Absensi Ibadah" sub="Centang jemaat yang hadir. Tersimpan otomatis." />
+      <PageHeader
+        title="Absensi Ibadah"
+        sub="Centang jemaat yang hadir, lalu klik Simpan absensi."
+        action={
+          pengurus && (
+            <Link
+              href="/absensi/laporan"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm font-medium hover:bg-tint/10"
+            >
+              <FileBarChart size={16} /> Laporan absensi
+            </Link>
+          )
+        }
+      />
 
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <div className="glass flex items-center gap-1 rounded-xl p-1">
-          <button className="rounded-lg p-2 hover:bg-white/10" onClick={() => setTanggal(geser(tanggal, -1))}>
+          <button className="rounded-lg p-2 hover:bg-tint/10" onClick={() => setTanggal(geser(tanggal, -1))}>
             <ChevronLeft size={18} />
           </button>
           <div className="min-w-[180px] px-2 text-center text-sm font-medium">
             Minggu, {fmtDate(tanggal, { month: "long" })}
           </div>
-          <button className="rounded-lg p-2 hover:bg-white/10" onClick={() => setTanggal(geser(tanggal, 1))}>
+          <button className="rounded-lg p-2 hover:bg-tint/10" onClick={() => setTanggal(geser(tanggal, 1))}>
             <ChevronRight size={18} />
           </button>
         </div>
@@ -127,7 +159,7 @@ export default function AbsensiPage() {
                     className={cn(
                       "rounded-xl border px-3 py-2 text-left text-sm transition",
                       sesi.status === s.v
-                        ? "border-primary bg-primary/15 text-white"
+                        ? "border-primary bg-primary/15 text-ink"
                         : "border-line bg-surface text-muted hover:text-ink",
                     )}
                   >
@@ -167,6 +199,16 @@ export default function AbsensiPage() {
         </Card>
       ) : (
         <>
+          {sesi.disimpan_at && (
+            <SimpanBar
+              disimpanAt={sesi.disimpan_at}
+              disimpanNama={sesi.disimpan_nama}
+              jumlah={jumlahHadir}
+              busy={busy}
+              onSimpan={() => simpan(true)}
+              onBuka={() => simpan(false)}
+            />
+          )}
           <div className="mb-4 grid gap-3 sm:grid-cols-3">
             <Card className="p-4">
               <div className="text-xs text-muted">Jemaat hadir</div>
@@ -178,17 +220,17 @@ export default function AbsensiPage() {
             <Card className="p-4">
               <div className="text-xs text-muted">Tamu / pengunjung (tanpa data)</div>
               <div className="mt-1 flex items-center gap-3">
-                <Button size="sm" onClick={() => setTamu(sesi.jumlah_tamu - 1)}>
+                <Button size="sm" disabled={!!sesi.disimpan_at} onClick={() => setTamu(sesi.jumlah_tamu - 1)}>
                   <Minus size={14} />
                 </Button>
                 <span className="w-10 text-center text-3xl font-bold">{sesi.jumlah_tamu}</span>
-                <Button size="sm" onClick={() => setTamu(sesi.jumlah_tamu + 1)}>
+                <Button size="sm" disabled={!!sesi.disimpan_at} onClick={() => setTamu(sesi.jumlah_tamu + 1)}>
                   <Plus size={14} />
                 </Button>
               </div>
             </Card>
             <Card className="flex items-center p-4">
-              <Button variant="primary" className="w-full" onClick={() => setTambah(true)}>
+              <Button variant="primary" className="w-full" disabled={!!sesi.disimpan_at} onClick={() => setTambah(true)}>
                 <UserPlus size={16} /> Jemaat baru datang
               </Button>
             </Card>
@@ -218,11 +260,14 @@ export default function AbsensiPage() {
                 <button
                   key={r.id}
                   onClick={() => toggle(r)}
+                  disabled={!!sesi.disimpan_at}
                   className={cn(
                     "flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition active:scale-[0.98]",
                     r.hadir
                       ? "border-success/40 bg-success/10"
                       : "border-line bg-surface hover:border-line-strong",
+                    sesi.disimpan_at && "cursor-default active:scale-100",
+                    sesi.disimpan_at && !r.hadir && "opacity-50",
                   )}
                 >
                   <span
@@ -247,6 +292,16 @@ export default function AbsensiPage() {
               )}
             </div>
           </Card>
+          {!sesi.disimpan_at && (
+            <SimpanBar
+              disimpanAt={null}
+              disimpanNama={null}
+              jumlah={jumlahHadir}
+              busy={busy}
+              onSimpan={() => simpan(true)}
+              onBuka={() => simpan(false)}
+            />
+          )}
         </>
       )}
 
@@ -328,7 +383,7 @@ function TambahCepat({
                 onClick={() => setStatus(s)}
                 className={cn(
                   "rounded-xl border py-2 text-sm",
-                  status === s ? "border-primary bg-primary/20 text-white" : "border-line bg-surface text-muted",
+                  status === s ? "border-primary bg-primary/20 text-ink" : "border-line bg-surface text-muted",
                 )}
               >
                 {s}

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useMe } from "@/components/role";
 import { Badge, Button, Card, CardTitle, ErrorText, Field, Modal, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import type { Opsi } from "@/lib/types";
+import type { GdgGroup, Opsi } from "@/lib/types";
 import { fmtDate } from "@/lib/utils";
 import { buatAkun, gantiPassword, hapusAkun, listAkun, type Akun } from "./actions";
 
@@ -54,7 +54,7 @@ function AkunCard() {
   return (
     <Card>
       <CardTitle
-        sub="Pengurus: akses penuh. Penatalayan (usher): hanya halaman absensi."
+        sub="Pengurus: akses penuh. Penatalayan (usher): hanya absensi ibadah. GDG leader: absensi ibadah + grup GDG-nya."
         action={
           <Button size="sm" variant="primary" onClick={() => setBaru(true)}>
             <Plus size={14} /> Akun baru
@@ -70,7 +70,9 @@ function AkunCard() {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-sm font-medium">
                 {a.username}
-                <Badge color={a.role === "pengurus" ? "purple" : "blue"}>{a.role}</Badge>
+                <Badge color={a.role === "pengurus" ? "purple" : a.role === "gdg_leader" ? "green" : "blue"}>
+                  {a.role === "gdg_leader" ? "GDG leader" : a.role}
+                </Badge>
               </div>
               <div className="text-xs text-muted">
                 {a.full_name ?? "-"} · login terakhir {a.last_sign_in_at ? fmtDate(a.last_sign_in_at) : "belum pernah"}
@@ -98,13 +100,22 @@ function AkunCard() {
 }
 
 function AkunBaruModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ username: "", full_name: "", role: "pengurus" as Akun["role"], password: "" });
+  const [f, setF] = useState({ username: "", full_name: "", role: "pengurus" as Akun["role"], password: "", gdg_group_id: "" });
+  const [groups, setGroups] = useState<GdgGroup[]>([]);
+  useEffect(() => {
+    createClient()
+      .from("gdg_groups")
+      .select("*")
+      .eq("is_active", true)
+      .order("nama")
+      .then(({ data }) => setGroups((data as GdgGroup[]) ?? []));
+  }, []);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setF({ username: "", full_name: "", role: "pengurus", password: "" });
+      setF({ username: "", full_name: "", role: "pengurus", password: "", gdg_group_id: "" });
       setError("");
     }
   }, [open]);
@@ -140,8 +151,26 @@ function AkunBaruModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
           <select className="field" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value as Akun["role"] })}>
             <option value="pengurus">Pengurus (akses penuh)</option>
             <option value="penatalayan">Penatalayan / usher (hanya absensi)</option>
+            <option value="gdg_leader">GDG leader (absensi + grup GDG-nya)</option>
           </select>
         </Field>
+        {f.role === "gdg_leader" && (
+          <Field label="Grup GDG">
+            <select
+              className="field"
+              value={f.gdg_group_id}
+              onChange={(e) => setF({ ...f, gdg_group_id: e.target.value })}
+              required
+            >
+              <option value="">Pilih grup…</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.nama}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Password" hint="Minimal 8 karakter">
           <input
             className="field"
@@ -269,7 +298,7 @@ function OpsiCard() {
                     className="inline-flex items-center gap-1 rounded-full border border-line bg-surface py-1 pl-3 pr-1.5 text-xs"
                   >
                     {o.label}
-                    <button onClick={() => hapus(o)} className="rounded-full p-0.5 text-faint hover:bg-white/10 hover:text-danger">
+                    <button onClick={() => hapus(o)} className="rounded-full p-0.5 text-faint hover:bg-tint/10 hover:text-danger">
                       <X size={12} />
                     </button>
                   </span>

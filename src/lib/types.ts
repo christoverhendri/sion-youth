@@ -1,7 +1,5 @@
 export type StatusAkademik = "SD" | "SMP" | "SMA" | "Kuliah" | "Kerja";
 export const STATUS_AKADEMIK: StatusAkademik[] = ["SD", "SMP", "SMA", "Kuliah", "Kerja"];
-export const KATEGORI_GDG = ["SD", "SMP", "SMA", "Kerja"] as const;
-export type KategoriGdg = (typeof KATEGORI_GDG)[number];
 
 export const ALASAN_NONAKTIF = [
   "Kuliah luar kota",
@@ -49,7 +47,8 @@ export type GdgGroup = {
   id: string;
   nama: string;
   leader_name: string;
-  target_kategori: KategoriGdg;
+  jenjang: StatusAkademik[];
+  jenis_kelamin: "L" | "P" | null;
   is_active: boolean;
   created_at: string;
 };
@@ -61,6 +60,8 @@ export type GdgSession = {
   tanggal: string;
   status: "terjadwal" | "batal";
   catatan: string | null;
+  disimpan_at: string | null;
+  disimpan_nama: string | null;
 };
 
 export type IbadahSession = {
@@ -69,7 +70,15 @@ export type IbadahSession = {
   status: "sion" | "gabung" | "libur";
   catatan: string | null;
   jumlah_tamu: number;
+  disimpan_at: string | null;
+  disimpan_nama: string | null;
 };
+
+/** "SMP & SMA · Cowok" */
+export function labelGrup(g: Pick<GdgGroup, "jenjang" | "jenis_kelamin">) {
+  const jk = g.jenis_kelamin === "L" ? " · Cowok" : g.jenis_kelamin === "P" ? " · Cewek" : "";
+  return g.jenjang.join(" & ") + jk;
+}
 
 export type AbsenRow = {
   id: string;

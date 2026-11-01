@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { ALASAN_NONAKTIF, type GdgGroup, type Jemaat, type Pelayanan } from "@/lib/types";
+import { ALASAN_NONAKTIF, labelGrup, type GdgGroup, type Jemaat, type Pelayanan } from "@/lib/types";
 import { draftFromJemaat, draftToRow, emptyDraft, JemaatFields, type JemaatDraft } from "./jemaat-form";
 import { Button, ErrorText, Field, Modal } from "./ui";
 
@@ -90,7 +90,7 @@ export function JemaatEditor({
                 <option value="auto">Otomatis (sesuai jenjang)</option>
                 {aktifGroups.map((g) => (
                   <option key={g.id} value={g.id}>
-                    {g.nama} · {g.target_kategori} · {g.leader_name}
+                    {g.nama} · {labelGrup(g)}
                   </option>
                 ))}
               </select>
@@ -115,6 +115,76 @@ export function JemaatEditor({
           </Button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+/** Modal hapus jemaat permanen (untuk bersih-bersih data dobel / salah input) */
+export function HapusModal({
+  jemaat,
+  onClose,
+  onNonaktif,
+  onDeleted,
+}: {
+  jemaat: Jemaat | null;
+  onClose: () => void;
+  onNonaktif: (j: Jemaat) => void;
+  onDeleted: () => void;
+}) {
+  const [konfirmasi, setKonfirmasi] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setKonfirmasi("");
+    setError("");
+  }, [jemaat]);
+
+  async function hapus() {
+    if (!jemaat) return;
+    setBusy(true);
+    const { error } = await createClient().from("jemaat").delete().eq("id", jemaat.id);
+    setBusy(false);
+    if (error) return setError(error.message);
+    onDeleted();
+    onClose();
+  }
+
+  const cocok = konfirmasi.trim().toLowerCase() === "hapus";
+
+  return (
+    <Modal open={!!jemaat} onClose={onClose} title={"Hapus " + (jemaat?.nama ?? "") + "?"}>
+      <div className="space-y-4 text-sm">
+        <p className="rounded-xl border border-danger/30 bg-danger/10 p-3 text-danger">
+          Data ini akan <b>dihapus permanen</b>, termasuk seluruh riwayat absensi ibadah, absensi GDG, minat
+          pelayanan, dan catatan follow-up-nya. Tidak bisa dibatalkan.
+        </p>
+        <p className="text-muted">
+          Pakai hapus hanya untuk data <b>dobel atau salah input</b>. Kalau orangnya kuliah ke luar kota, pindah, atau
+          sudah lama tidak datang, lebih baik{" "}
+          <button
+            className="font-medium text-primary hover:underline"
+            onClick={() => {
+              const j = jemaat!;
+              onClose();
+              onNonaktif(j);
+            }}
+          >
+            nonaktifkan saja
+          </button>{" "}
+          supaya riwayatnya tetap ada.
+        </p>
+        <Field label="Ketik hapus untuk konfirmasi">
+          <input className="field" value={konfirmasi} onChange={(e) => setKonfirmasi(e.target.value)} autoFocus />
+        </Field>
+        <ErrorText>{error}</ErrorText>
+        <div className="flex justify-end gap-2">
+          <Button onClick={onClose}>Batal</Button>
+          <Button variant="danger" onClick={hapus} disabled={!cocok || busy}>
+            Hapus permanen
+          </Button>
+        </div>
+      </div>
     </Modal>
   );
 }

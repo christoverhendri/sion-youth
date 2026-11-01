@@ -16,18 +16,22 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { Role } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { useMe } from "./role";
+import { ThemeToggle } from "./theme";
 
-const NAV = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, pengurus: true },
-  { href: "/jemaat", label: "Data Jemaat", icon: Users, pengurus: true },
-  { href: "/absensi", label: "Absensi Ibadah", icon: ClipboardCheck, pengurus: false },
-  { href: "/gdg", label: "Grup GDG", icon: UsersRound, pengurus: true },
-  { href: "/analisis", label: "Analisis", icon: BarChart3, pengurus: true },
-  { href: "/kalender", label: "Kalender", icon: CalendarDays, pengurus: true },
-  { href: "/pengaturan", label: "Pengaturan", icon: Settings, pengurus: true },
+const ALL: Role[] = ["pengurus", "penatalayan", "gdg_leader"];
+const NAV: { href: string; label: string; icon: typeof Users; roles: Role[] }[] = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["pengurus"] },
+  { href: "/jemaat", label: "Data Jemaat", icon: Users, roles: ["pengurus"] },
+  { href: "/absensi", label: "Absensi Ibadah", icon: ClipboardCheck, roles: ALL },
+  { href: "/gdg", label: "Grup GDG", icon: UsersRound, roles: ["pengurus", "gdg_leader"] },
+  { href: "/analisis", label: "Analisis", icon: BarChart3, roles: ["pengurus"] },
+  { href: "/kalender", label: "Kalender", icon: CalendarDays, roles: ["pengurus"] },
+  { href: "/pengaturan", label: "Pengaturan", icon: Settings, roles: ["pengurus"] },
 ];
+const ROLE_LABEL: Record<Role, string> = { pengurus: "Pengurus", penatalayan: "Penatalayan", gdg_leader: "GDG Leader" };
 
 function Logo() {
   return (
@@ -50,7 +54,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const items = NAV.filter((n) => me.role === "pengurus" || !n.pengurus);
+  const items = NAV.filter((n) => n.roles.includes(me.role));
 
   async function logout() {
     await createClient().auth.signOut();
@@ -70,8 +74,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             className={cn(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
               active
-                ? "border border-line-strong bg-white/[0.07] font-medium text-ink"
-                : "border border-transparent text-muted hover:bg-white/[0.04] hover:text-ink",
+                ? "border border-line-strong bg-tint/[0.07] font-medium text-ink"
+                : "border border-transparent text-muted hover:bg-tint/[0.04] hover:text-ink",
             )}
           >
             <Icon size={18} className={active ? "text-primary" : ""} />
@@ -89,9 +93,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{me.full_name ?? me.username}</div>
-        <div className="text-[11px] capitalize text-muted">{me.role}</div>
+        <div className="text-[11px] text-muted">{ROLE_LABEL[me.role]}</div>
       </div>
-      <button onClick={logout} title="Keluar" className="rounded-lg p-1.5 text-muted hover:bg-white/10 hover:text-ink">
+      <ThemeToggle className="rounded-lg p-1.5 text-muted hover:bg-tint/10 hover:text-ink" />
+      <button onClick={logout} title="Keluar" className="rounded-lg p-1.5 text-muted hover:bg-tint/10 hover:text-ink">
         <LogOut size={16} />
       </button>
     </div>
@@ -100,7 +105,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="app-glow min-h-screen">
       {/* Sidebar desktop */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-[#070c1c]/80 p-4 backdrop-blur-xl lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-line bg-sidebar p-4 backdrop-blur-xl lg:flex">
         <div className="mb-8 mt-2">
           <Logo />
         </div>
@@ -109,11 +114,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Topbar mobile */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-[#070c1c]/85 px-4 py-3 backdrop-blur-xl lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-sidebar px-4 py-3 backdrop-blur-xl lg:hidden">
         <Logo />
-        <button onClick={() => setOpen(true)} className="rounded-lg border border-line p-2">
-          <Menu size={18} />
-        </button>
+        <div className="flex gap-2">
+          <ThemeToggle />
+          <button onClick={() => setOpen(true)} className="rounded-lg border border-line p-2">
+            <Menu size={18} />
+          </button>
+        </div>
       </header>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
