@@ -3,6 +3,9 @@ export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const SUPABASE_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Variabel NEXT_PUBLIC_* ditanam saat build. Kalau kosong di Vercel, semua request akan gagal.
+export const SUPABASE_SIAP = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
 // Login memakai username. Di Supabase Auth disimpan sebagai email palsu <username>@sion.local
 export const USERNAME_DOMAIN = "sion.local";
 export function usernameToEmail(username: string) {
