@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMe } from "@/components/role";
 import { SimpanBar } from "@/components/simpan-bar";
-import { Badge, Button, Card, ErrorText, Field, Loading, Modal, PageHeader } from "@/components/ui";
+import { TambahCepat } from "@/components/tambah-cepat";
+import { Badge, Button, Card, ErrorText, Field, Loading, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_AKADEMIK, type IbadahSession, type StatusAkademik } from "@/lib/types";
 import { cn, fmtDate, isoDate, mingguIni, parseDate } from "@/lib/utils";
@@ -307,8 +308,16 @@ export default function AbsensiPage() {
 
       <TambahCepat
         open={tambah}
-        sessionId={sesi?.id ?? null}
         namaAwal={q}
+        tambah={async (v) => {
+          const { error } = await createClient().rpc("tambah_jemaat_cepat", {
+            p_nama: v.nama,
+            p_hp: v.hp,
+            p_status: v.status,
+            p_session: sesi?.id ?? null,
+          });
+          return error?.message ?? null;
+        }}
         onClose={() => setTambah(false)}
         onSaved={() => {
           setQ("");
@@ -316,91 +325,5 @@ export default function AbsensiPage() {
         }}
       />
     </>
-  );
-}
-
-function TambahCepat({
-  open,
-  sessionId,
-  namaAwal,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  sessionId: string | null;
-  namaAwal: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [nama, setNama] = useState("");
-  const [hp, setHp] = useState("");
-  const [status, setStatus] = useState<StatusAkademik>("SMA");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setNama(namaAwal);
-      setHp("");
-      setError("");
-    }
-  }, [open, namaAwal]);
-
-  async function save(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    const { error } = await createClient().rpc("tambah_jemaat_cepat", {
-      p_nama: nama,
-      p_hp: hp,
-      p_status: status,
-      p_session: sessionId,
-    });
-    setBusy(false);
-    if (error) return setError(error.message);
-    onSaved();
-    onClose();
-  }
-
-  return (
-    <Modal open={open} onClose={onClose} title="Jemaat baru datang">
-      <form onSubmit={save} className="space-y-4">
-        <p className="text-sm text-muted">
-          Isi data singkat saja. Jemaat langsung tercatat hadir. Minta dia isi form lengkap nanti, atau pengurus yang
-          melengkapi.
-        </p>
-        <Field label="Nama lengkap *">
-          <input className="field" value={nama} onChange={(e) => setNama(e.target.value)} required autoFocus />
-        </Field>
-        <Field label="No. WhatsApp">
-          <input className="field" inputMode="tel" value={hp} onChange={(e) => setHp(e.target.value)} />
-        </Field>
-        <Field label="Jenjang">
-          <div className="grid grid-cols-5 gap-2">
-            {STATUS_AKADEMIK.map((s) => (
-              <button
-                type="button"
-                key={s}
-                onClick={() => setStatus(s)}
-                className={cn(
-                  "rounded-xl border py-2 text-sm",
-                  status === s ? "border-primary bg-primary/20 text-ink" : "border-line bg-surface text-muted",
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </Field>
-        <ErrorText>{error}</ErrorText>
-        <div className="flex justify-end gap-2">
-          <Button type="button" onClick={onClose}>
-            Batal
-          </Button>
-          <Button variant="primary" disabled={busy}>
-            Simpan & tandai hadir
-          </Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

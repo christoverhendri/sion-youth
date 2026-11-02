@@ -3,10 +3,12 @@
 import {
   BarChart3,
   CalendarDays,
+  ChevronDown,
   ClipboardCheck,
   LayoutDashboard,
   LogOut,
   Menu,
+  PartyPopper,
   Settings,
   Users,
   UsersRound,
@@ -21,11 +23,43 @@ import { cn } from "@/lib/utils";
 import { useMe } from "./role";
 import { ThemeToggle } from "./theme";
 
+type Icon = typeof Users;
+type NavLink = { href: string; label: string; icon: Icon; roles: Role[] };
+type NavGroup = {
+  label: string;
+  icon: Icon;
+  roles: Role[];
+  /** grup terbuka otomatis kalau halaman aktif ada di bawah path ini */
+  base: string;
+  children: (NavLink & { aktif: (path: string) => boolean })[];
+};
+
 const ALL: Role[] = ["pengurus", "penatalayan", "gdg_leader"];
-const NAV: { href: string; label: string; icon: typeof Users; roles: Role[] }[] = [
+const NAV: (NavLink | NavGroup)[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["pengurus"] },
   { href: "/jemaat", label: "Data Jemaat", icon: Users, roles: ["pengurus"] },
-  { href: "/absensi", label: "Absensi Ibadah", icon: ClipboardCheck, roles: ALL },
+  {
+    label: "Absensi",
+    icon: ClipboardCheck,
+    roles: ALL,
+    base: "/absensi",
+    children: [
+      {
+        href: "/absensi",
+        label: "Absensi Ibadah",
+        icon: ClipboardCheck,
+        roles: ALL,
+        aktif: (p) => p === "/absensi" || p.startsWith("/absensi/laporan"),
+      },
+      {
+        href: "/absensi/event",
+        label: "Absensi Event",
+        icon: PartyPopper,
+        roles: ALL,
+        aktif: (p) => p.startsWith("/absensi/event"),
+      },
+    ],
+  },
   { href: "/gdg", label: "Grup GDG", icon: UsersRound, roles: ["pengurus", "gdg_leader"] },
   { href: "/analisis", label: "Analisis", icon: BarChart3, roles: ["pengurus"] },
   { href: "/kalender", label: "Kalender", icon: CalendarDays, roles: ["pengurus"] },
@@ -55,6 +89,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const items = NAV.filter((n) => n.roles.includes(me.role));
+  // Grup menu yang dilipat manual; grup yang sedang aktif selalu terbuka
+  const [tutup, setTutup] = useState<Record<string, boolean>>({});
 
   async function logout() {
     await createClient().auth.signOut();
@@ -62,24 +98,60 @@ export function Shell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
+  const linkClass = (active: boolean, sub = false) =>
+    cn(
+      "flex items-center gap-3 rounded-xl text-sm transition",
+      sub ? "px-3 py-2" : "px-3 py-2.5",
+      active
+        ? "border border-line-strong bg-tint/[0.07] font-medium text-ink"
+        : "border border-transparent text-muted hover:bg-tint/[0.04] hover:text-ink",
+    );
+
   const nav = (
     <nav className="flex flex-1 flex-col gap-1">
-      {items.map(({ href, label, icon: Icon }) => {
-        const active = href === "/" ? path === "/" : path.startsWith(href);
+      {items.map((n) => {
+        if ("children" in n) {
+          const Icon = n.icon;
+          const dalam = path.startsWith(n.base);
+          const terbuka = dalam || !tutup[n.label];
+          const anak = n.children.filter((c) => c.roles.includes(me.role));
+          return (
+            <div key={n.label}>
+              <button
+                onClick={() => setTutup({ ...tutup, [n.label]: terbuka })}
+                aria-expanded={terbuka}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm transition hover:bg-tint/[0.04] hover:text-ink",
+                  dalam ? "font-medium text-ink" : "text-muted",
+                )}
+              >
+                <Icon size={18} className={dalam ? "text-primary" : ""} />
+                {n.label}
+                <ChevronDown size={15} className={cn("ml-auto transition-transform", !terbuka && "-rotate-90")} />
+              </button>
+              {terbuka && (
+                <div className="ml-[22px] mt-1 flex flex-col gap-1 border-l border-line pl-3">
+                  {anak.map((c) => {
+                    const SubIcon = c.icon;
+                    const active = c.aktif(path);
+                    return (
+                      <Link key={c.href} href={c.href} onClick={() => setOpen(false)} className={linkClass(active, true)}>
+                        <SubIcon size={16} className={active ? "text-primary" : ""} />
+                        {c.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
+        const Icon = n.icon;
+        const active = n.href === "/" ? path === "/" : path.startsWith(n.href);
         return (
-          <Link
-            key={href}
-            href={href}
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
-              active
-                ? "border border-line-strong bg-tint/[0.07] font-medium text-ink"
-                : "border border-transparent text-muted hover:bg-tint/[0.04] hover:text-ink",
-            )}
-          >
+          <Link key={n.href} href={n.href} onClick={() => setOpen(false)} className={linkClass(active)}>
             <Icon size={18} className={active ? "text-primary" : ""} />
-            {label}
+            {n.label}
           </Link>
         );
       })}

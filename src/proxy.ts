@@ -2,7 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_SIAP, SUPABASE_URL } from "@/lib/supabase/env";
 
-const PUBLIC_PATHS = ["/login", "/daftar"];
+// /kalender-feed dibaca oleh Google Calendar (tanpa login), dijaga token rahasia di URL
+const PUBLIC_PATHS = ["/login", "/daftar", "/kalender-feed"];
 
 // Ditampilkan kalau environment variable Supabase belum di-set di hosting (mis. Vercel)
 const HALAMAN_ENV_KOSONG = `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konfigurasi belum lengkap</title></head>

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pencil, RotateCcw, UserRound } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pencil, RotateCcw, Search, UserPlus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -8,12 +8,14 @@ import { FollowUpButton } from "@/components/followup";
 import { GroupModal } from "@/components/group-modal";
 import { useMe } from "@/components/role";
 import { SimpanBar } from "@/components/simpan-bar";
-import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Loading } from "@/components/ui";
+import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Loading, Modal } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
-import { labelGrup, type GdgGroup, type GdgSession, type Jemaat } from "@/lib/types";
+import { labelGrup, type GdgGroup, type GdgSession, type Jemaat, type StatusAkademik } from "@/lib/types";
 import { addMonths, cn, firstOfMonth, fmtDate, fmtMonth, isoDate, jenjang } from "@/lib/utils";
 
 type Member = Pick<Jemaat, "id" | "nama" | "no_hp" | "no_hp_ortu" | "status_akademik" | "kelas" | "gdg_manual">;
+/** Anggota GDG lain yang ikut GDG ini (mis. kalau dua grup digabung) */
+type Tamu = { id: string; nama: string; status_akademik: StatusAkademik; grup_nama: string | null };
 type Stat = { id: string; absen_beruntun: number; total_sesi: number; total_hadir: number; terakhir_hadir: string | null };
 
 function sabtuKedua(bulan: string) {
@@ -35,6 +37,8 @@ export default function GdgDetailPage() {
   const [sesi, setSesi] = useState<GdgSession | null>(null);
   const [hadir, setHadir] = useState<Set<string>>(new Set());
   const [edit, setEdit] = useState(false);
+  const [tamu, setTamu] = useState<Tamu[]>([]);
+  const [tambahTamu, setTambahTamu] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -65,7 +69,12 @@ export default function GdgDetailPage() {
     if (s) {
       const { data } = await sb.from("gdg_attendance").select("jemaat_id").eq("session_id", s.id);
       setHadir(new Set(((data as { jemaat_id: string }[]) ?? []).map((a) => a.jemaat_id)));
-    } else setHadir(new Set());
+      const t = await sb.rpc("gdg_tamu_list", { p_session: s.id });
+      setTamu((t.data as Tamu[]) ?? []);
+    } else {
+      setHadir(new Set());
+      setTamu([]);
+    }
   }, [id, bulan]);
 
   useEffect(() => {
@@ -83,11 +92,26 @@ export default function GdgDetailPage() {
     if (on) next.delete(jid);
     else next.add(jid);
     setHadir(next);
+    if (on) setTamu((ts) => ts.filter((t) => t.id !== jid));
     const { error } = await createClient().rpc("set_hadir_gdg", { p_session: sesi.id, p_jemaat: jid, p_hadir: !on });
     if (error) {
       setError(error.message);
       loadSesi();
     }
+  }
+
+  async function toggleTamu(t: Tamu, tambah: boolean) {
+    if (!sesi) return;
+    setError("");
+    const { error } = await createClient().rpc("set_hadir_gdg", { p_session: sesi.id, p_jemaat: t.id, p_hadir: tambah });
+    if (error) return setError(error.message);
+    setHadir((h) => {
+      const n = new Set(h);
+      if (tambah) n.add(t.id);
+      else n.delete(t.id);
+      return n;
+    });
+    setTamu((ts) => (tambah ? [...ts.filter((x) => x.id !== t.id), t] : ts.filter((x) => x.id !== t.id)));
   }
 
   async function simpan(p: boolean) {
@@ -292,6 +316,46 @@ export default function GdgDetailPage() {
               })}
             </div>
           )}
+          {sesi && sesi.status === "terjadwal" && (tamu.length > 0 || bisaAbsen) && (
+            <div className="mt-5">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Dari GDG lain{tamu.length > 0 && ` · ${tamu.length}`}
+                </div>
+                {bisaAbsen && (
+                  <Button size="sm" onClick={() => setTambahTamu(true)}>
+                    <UserPlus size={13} /> Tambah dari GDG lain
+                  </Button>
+                )}
+              </div>
+              {tamu.length === 0 ? (
+                <p className="text-xs text-faint">
+                  Kalau GDG bulan ini digabung dengan grup lain, tambahkan anggota grup itu di sini.
+                </p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {tamu.map((t) => (
+                    <button
+                      key={t.id}
+                      disabled={!bisaAbsen}
+                      onClick={() => toggleTamu(t, false)}
+                      title={bisaAbsen ? "Klik untuk membatalkan" : undefined}
+                      className={cn(
+                        "flex items-center gap-3 rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-left text-sm",
+                        !bisaAbsen && "cursor-default",
+                      )}
+                    >
+                      <span className="grid h-5 w-5 place-items-center rounded-md border border-success bg-success text-[#052e1f]">
+                        <Check size={13} strokeWidth={3} />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{t.nama}</span>
+                      <span className="shrink-0 text-[11px] text-muted">{t.grup_nama ?? "tanpa grup"}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {sesi && bisaAbsen && (
             <SimpanBar
               disimpanAt={null}
@@ -376,7 +440,111 @@ export default function GdgDetailPage() {
         </div>
       </Card>
 
+      <TambahTamuModal
+        open={tambahTamu}
+        groupId={group.id}
+        sudah={new Set(tamu.map((t) => t.id))}
+        onToggle={toggleTamu}
+        onClose={() => setTambahTamu(false)}
+      />
       <GroupModal value={edit ? group : null} onClose={() => setEdit(false)} onSaved={loadGroup} />
     </>
+  );
+}
+
+/** Pilih jemaat dari GDG lain yang ikut GDG ini hari ini */
+function TambahTamuModal({
+  open,
+  groupId,
+  sudah,
+  onToggle,
+  onClose,
+}: {
+  open: boolean;
+  groupId: string;
+  sudah: Set<string>;
+  onToggle: (t: Tamu, tambah: boolean) => void;
+  onClose: () => void;
+}) {
+  const [list, setList] = useState<Tamu[] | null>(null);
+  const [q, setQ] = useState("");
+  const [grup, setGrup] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setQ("");
+    setGrup("");
+    setList(null);
+    createClient()
+      .rpc("jemaat_gdg_lain", { p_group: groupId })
+      .then(({ data }) => setList((data as Tamu[]) ?? []));
+  }, [open, groupId]);
+
+  const namaGrup = [...new Set((list ?? []).map((t) => t.grup_nama ?? "Tanpa grup"))].sort();
+  const tampil = (list ?? []).filter(
+    (t) =>
+      (!grup || (t.grup_nama ?? "Tanpa grup") === grup) && (!q.trim() || t.nama.toLowerCase().includes(q.trim().toLowerCase())),
+  );
+
+  return (
+    <Modal open={open} onClose={onClose} title="Tambah dari GDG lain">
+      <div className="space-y-3">
+        <p className="text-sm text-muted">
+          Untuk GDG yang digabung dengan grup lain. Yang dipilih langsung tercatat hadir di GDG ini; keanggotaan
+          grupnya sendiri tidak berubah.
+        </p>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
+            <input className="field pl-9" placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          </div>
+          <select className="field w-auto" value={grup} onChange={(e) => setGrup(e.target.value)}>
+            <option value="">Semua grup</option>
+            {namaGrup.map((g) => (
+              <option key={g}>{g}</option>
+            ))}
+          </select>
+        </div>
+        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto pr-1">
+          {!list ? (
+            <p className="py-6 text-center text-sm text-muted">Memuat…</p>
+          ) : tampil.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">Tidak ada jemaat yang cocok.</p>
+          ) : (
+            tampil.map((t) => {
+              const on = sudah.has(t.id);
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => onToggle(t, !on)}
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition",
+                    on ? "border-success/40 bg-success/10" : "border-line bg-surface hover:border-line-strong",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border",
+                      on ? "border-success bg-success text-[#052e1f]" : "border-line-strong",
+                    )}
+                  >
+                    {on && <Check size={13} strokeWidth={3} />}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{t.nama}</span>
+                  <span className="shrink-0 text-[11px] text-muted">
+                    {t.status_akademik} · {t.grup_nama ?? "tanpa grup"}
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+        <div className="flex justify-end">
+          <Button variant="primary" onClick={onClose}>
+            Selesai
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

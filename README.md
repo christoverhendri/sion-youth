@@ -8,10 +8,12 @@ Next.js + Supabase, di-deploy ke Vercel.
 - **Data jemaat**: data master, form pendaftaran publik (`/daftar`), aktif/nonaktif dengan alasan, follow-up WhatsApp + catatan.
 - **Absensi ibadah**: usher centang hadir dari HP, lalu **Simpan absensi** (daftar dikunci, bisa dibuka lagi untuk update). Pengurus bisa ubah status minggu: *Ibadah Sion* / *Gabung Umum* / *Libur* (minggu gabung/libur tidak ada absensi dan tidak dihitung).
 - **Laporan absensi**: rekap per minggu & per jemaat, export CSV (format seperti spreadsheet lama).
+- **Absensi event**: untuk Fun Activity Day, retreat, dll. Event yang sama dipakai di Kalender, bisa disimpan/dikunci seperti absensi ibadah. Menu *Absensi* di sidebar berisi Absensi Ibadah dan Absensi Event.
 - **Peringatan lama tidak datang**: 🟡 2 minggu, 🔴 4 minggu ibadah Sion berturut-turut.
-- **GDG**: grup punya jenjang + jenis kelamin (mis. *SMP & SMA · Cowok*). Jemaat aktif otomatis masuk grup yang cocok dengan anggota paling sedikit. Pindah manual tidak akan ditimpa sistem. Jadwal otomatis Sabtu minggu ke-2, bisa diubah/dibatalkan per bulan.
+- **GDG**: grup punya jenjang + jenis kelamin (mis. *SMP & SMA · Cowok*). Jemaat aktif otomatis masuk grup yang cocok dengan anggota paling sedikit. Pindah manual tidak akan ditimpa sistem. Jadwal otomatis Sabtu minggu ke-2, bisa diubah/dibatalkan per bulan. Kalau GDG digabung, anggota GDG lain bisa ditambahkan ke absensi hari itu.
 - **Analisis**: hobi, kemampuan & minat pelayanan, kuliah dalam/luar negeri, proporsi jenjang, absen GDG per grup, jemaat baru per bulan, tren kehadiran, retensi, top pengajak, domisili, kandidat penatalayan.
 - **Kalender**: kalender bulanan + timeline proker per bulan.
+- **Google Calendar**: tombol *Sinkron Google Calendar* di halaman Kalender memberi link langganan (.ics, satu arah, tanpa API Google). Per kegiatan ada juga tombol *Ke Google Calendar*.
 - **Role**: `pengurus` (akses penuh), `penatalayan` (hanya absensi ibadah), `gdg_leader` (absensi ibadah + absensi & anggota grup GDG-nya saja). Data pribadi dilindungi Row Level Security di database.
 - **Dark / light mode**: tombol matahari/bulan di sidebar.
 

@@ -91,38 +91,42 @@ body {
     var(--bg);
 }
 
-.glass {
-  background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
-  border: 1px solid var(--border);
-  backdrop-filter: blur(14px);
-}
-:root[data-theme="light"] .glass {
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
-}
+/* Komponen dasar. Berada di layer "components" supaya kelas utility Tailwind
+   (w-auto, pl-9, py-1.5, text-xs, ...) bisa menimpanya. Di luar layer, CSS ini akan selalu menang. */
+@layer components {
+  .glass {
+    background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
+    border: 1px solid var(--border);
+    backdrop-filter: blur(14px);
+  }
+  :root[data-theme="light"] .glass {
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
+  }
 
-.field {
-  width: 100%;
-  background: rgb(var(--tint) / 0.04);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 0.6rem 0.85rem;
-  color: var(--text);
-  font-size: 0.9rem;
-  outline: none;
-  transition: border-color 0.15s, background 0.15s;
-}
-:root[data-theme="light"] .field {
-  background: #ffffff;
-}
-.field:focus {
-  border-color: var(--primary);
-  background: rgba(79, 124, 255, 0.06);
-}
-.field::placeholder {
-  color: var(--faint);
-}
-select.field option {
-  background: var(--surface-solid);
+  .field {
+    width: 100%;
+    background: rgb(var(--tint) / 0.04);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    color: var(--text);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  :root[data-theme="light"] .field {
+    background: #ffffff;
+  }
+  .field:focus {
+    border-color: var(--primary);
+    background: rgba(79, 124, 255, 0.06);
+  }
+  .field::placeholder {
+    color: var(--faint);
+  }
+  select.field option {
+    background: var(--surface-solid);
+  }
 }
 
 /* Ganti tema: lingkaran menyebar dari tombol (lihat setTheme di components/theme.tsx) */

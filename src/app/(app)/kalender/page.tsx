@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Modal, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { googleCalendarUrl } from "@/lib/ics";
 import type { Activity } from "@/lib/types";
 import { addMonths, cn, firstOfMonth, fmtDate, fmtMonth, isoDate, parseDate } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export default function KalenderPage() {
   const [bulan, setBulan] = useState(firstOfMonth());
   const [acts, setActs] = useState<Activity[]>([]);
   const [edit, setEdit] = useState<Activity | "new" | null>(null);
+  const [sinkron, setSinkron] = useState(false);
   const [tahun, setTahun] = useState(new Date().getFullYear());
 
   const load = useCallback(async () => {
@@ -72,9 +74,14 @@ export default function KalenderPage() {
         title="Kalender Kegiatan"
         sub="Program kerja & timeline Sion Youth"
         action={
-          <Button variant="primary" onClick={() => setEdit("new")}>
-            <Plus size={16} /> Tambah kegiatan
-          </Button>
+          <>
+            <Button onClick={() => setSinkron(true)}>
+              <RefreshCw size={16} /> Sinkron Google Calendar
+            </Button>
+            <Button variant="primary" onClick={() => setEdit("new")}>
+              <Plus size={16} /> Tambah kegiatan
+            </Button>
+          </>
         }
       />
 
@@ -204,6 +211,7 @@ export default function KalenderPage() {
       </Card>
 
       <ActivityModal value={edit} onClose={() => setEdit(null)} onSaved={load} />
+      <SinkronModal open={sinkron} onClose={() => setSinkron(false)} />
     </>
   );
 }
@@ -315,9 +323,20 @@ function ActivityModal({
         <ErrorText>{error}</ErrorText>
         <div className="flex justify-between gap-2">
           {a ? (
-            <Button type="button" variant="danger" onClick={hapus}>
-              <Trash2 size={15} /> Hapus
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="danger" onClick={hapus}>
+                <Trash2 size={15} /> Hapus
+              </Button>
+              <a
+                href={googleCalendarUrl({ nama: f.nama, mulai: f.mulai, selesai: f.selesai, deskripsi: f.deskripsi, pic: f.pic })}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm font-medium transition hover:border-line-strong hover:bg-tint/10"
+                title="Buka Google Calendar dengan data kegiatan ini sudah terisi"
+              >
+                <CalendarPlus size={15} /> Ke Google Calendar
+              </a>
+            </div>
           ) : (
             <span />
           )}
@@ -329,6 +348,114 @@ function ActivityModal({
           </div>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+/** Cara menyinkronkan kalender Sion ke Google Calendar lewat link langganan (.ics) */
+function SinkronModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [tersalin, setTersalin] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setError("");
+    setTersalin(false);
+    createClient()
+      .from("app_settings")
+      .select("value")
+      .eq("key", "kalender_token")
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) setError(error.message);
+        setToken((data?.value as string | undefined) ?? null);
+      });
+  }, [open]);
+
+  const url = token && typeof window !== "undefined" ? `${window.location.origin}/kalender-feed/${token}.ics` : "";
+  const lokal = url.includes("localhost") || url.includes("127.0.0.1");
+
+  async function salin() {
+    await navigator.clipboard.writeText(url);
+    setTersalin(true);
+    setTimeout(() => setTersalin(false), 2000);
+  }
+
+  async function buatBaru() {
+    if (!confirm("Buat link baru? Link lama langsung berhenti bekerja, dan kalender yang sudah berlangganan harus diganti linknya.")) return;
+    setBusy(true);
+    const { data, error } = await createClient().rpc("reset_kalender_token");
+    setBusy(false);
+    if (error) return setError(error.message);
+    setToken(data as string);
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Sinkron ke Google Calendar" wide>
+      <div className="space-y-5 text-sm">
+        <p className="text-muted">
+          Kalender Sion (semua kegiatan + jadwal GDG tiap grup) bisa muncul di Google Calendar sebagai kalender
+          langganan. Tidak perlu API Google, cukup tempel satu link.
+        </p>
+
+        <Field label="Link langganan">
+          <div className="flex gap-2">
+            <input className="field font-mono text-xs" readOnly value={url || "Memuat…"} onFocus={(e) => e.currentTarget.select()} />
+            <Button variant="primary" onClick={salin} disabled={!url}>
+              {tersalin ? <Check size={15} /> : <Copy size={15} />} {tersalin ? "Tersalin" : "Salin"}
+            </Button>
+          </div>
+        </Field>
+        {lokal && (
+          <p className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-warning">
+            Kamu membuka dari <b>localhost</b>, jadi Google tidak bisa mengakses link ini. Buka dashboard dari alamat
+            yang sudah online (Vercel), lalu salin linknya dari sana.
+          </p>
+        )}
+        <ErrorText>{error}</ErrorText>
+
+        <ol className="space-y-2 rounded-xl border border-line bg-surface p-4 text-muted">
+          <li>
+            <b className="text-ink">1.</b> Salin link di atas.
+          </li>
+          <li>
+            <b className="text-ink">2.</b> Buka{" "}
+            <a className="inline-flex items-center gap-1 text-primary hover:underline" href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank" rel="noreferrer">
+              Google Calendar → Tambahkan lewat URL <ExternalLink size={12} />
+            </a>{" "}
+            (di laptop). Atau: panel kiri <i>Kalender lain</i> → <b>+</b> → <b>Dari URL</b>.
+          </li>
+          <li>
+            <b className="text-ink">3.</b> Tempel link, lalu klik <b>Tambahkan kalender</b>. Kalender &quot;Sion
+            Youth&quot; akan muncul, juga di HP kalau memakai akun Google yang sama.
+          </li>
+        </ol>
+
+        <div className="space-y-1.5 text-xs text-muted">
+          <p>
+            <b className="text-ink">Satu arah:</b> perubahan di dashboard Sion akan muncul di Google Calendar,
+            tidak sebaliknya. Tambah atau ubah kegiatan tetap lewat dashboard ini.
+          </p>
+          <p>
+            <b className="text-ink">Tidak instan:</b> Google memperbarui kalender langganan sendiri, biasanya
+            beberapa jam sekali (kadang sampai sehari). Itu pengaturan Google, tidak bisa dipercepat dari sini.
+          </p>
+          <p>
+            <b className="text-ink">Jaga linknya:</b> siapa pun yang punya link bisa melihat jadwal Sion (tanpa data
+            jemaat). Kalau bocor, buat link baru.
+          </p>
+          <p>Kegiatan yang berstatus Batal tidak ikut. Untuk satu kegiatan saja, pakai tombol &quot;Ke Google Calendar&quot; di detail kegiatan.</p>
+        </div>
+
+        <div className="flex justify-between gap-2">
+          <Button variant="danger" onClick={buatBaru} disabled={busy || !token}>
+            <RefreshCw size={14} /> Buat link baru
+          </Button>
+          <Button onClick={onClose}>Tutup</Button>
+        </div>
+      </div>
     </Modal>
   );
 }

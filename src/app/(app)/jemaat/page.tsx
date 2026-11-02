@@ -1,11 +1,27 @@
 "use client";
 
-import { CheckCheck, ClipboardList, Copy, Info, Pencil, Plus, Power, Search, Trash2, UserCheck, X } from "lucide-react";
+import {
+  CheckCheck,
+  ChevronDown,
+  ClipboardList,
+  Copy,
+  Eye,
+  Info,
+  MessageCircle,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Power,
+  Search,
+  Trash2,
+  UserCheck,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FollowUpButton } from "@/components/followup";
 import { JemaatDetail } from "@/components/jemaat-detail";
 import { HapusModal, JemaatEditor, NonaktifModal } from "@/components/jemaat-editor";
-import { Badge, Button, Card, Empty, Loading, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, Empty, Loading, Modal, PageHeader } from "@/components/ui";
 import { fetchAll } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_AKADEMIK, type GdgGroup, type Jemaat } from "@/lib/types";
@@ -30,6 +46,15 @@ const KOSONG: { key: string; label: string; kosong: (j: Jemaat, punyaPelayanan: 
   { key: "diajak", label: "Diajak oleh", kosong: (j) => !j.diajak_oleh_nama && !j.diajak_oleh },
 ];
 
+// Gaya sel tabel. Sel yang menempel butuh latar solid supaya isi yang di-scroll tidak tembus.
+const TH = "border-b border-line px-4 py-3 font-medium";
+const TH_STICKY = "border-b border-line px-3 py-3 font-medium sm:px-4";
+const TD = "border-t border-line px-4 py-3";
+const TD_STICKY = "border-t border-line px-3 py-3 sm:px-4";
+const LATAR = "bg-surface-solid group-hover:bg-[color-mix(in_srgb,var(--surface-solid)_96%,rgb(var(--tint)))]";
+const STICKY_KIRI = `sticky left-0 z-10 min-w-[112px] max-w-[200px] sm:min-w-[150px] ${LATAR} shadow-[6px_0_8px_-6px_rgba(0,0,0,0.3)]`;
+const STICKY_KANAN = `sticky right-0 z-10 ${LATAR} shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.3)]`;
+
 export default function JemaatPage() {
   const [rows, setRows] = useState<Jemaat[] | null>(null);
   const [groups, setGroups] = useState<GdgGroup[]>([]);
@@ -42,7 +67,9 @@ export default function JemaatPage() {
   const [nonaktif, setNonaktif] = useState<Jemaat | null>(null);
   const [copied, setCopied] = useState(false);
   const [hapus, setHapus] = useState<Jemaat | null>(null);
+  const [aksi, setAksi] = useState<Jemaat | null>(null);
   const [kosong, setKosong] = useState("");
+  const [bukaKosong, setBukaKosong] = useState(false); // di HP panel kelengkapan dilipat dulu
   const [punyaPelayanan, setPunyaPelayanan] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
@@ -135,21 +162,30 @@ export default function JemaatPage() {
       />
 
       <Card className="mb-4 py-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-sm font-semibold">
+        <div className={cn("flex flex-wrap items-center justify-between gap-2", bukaKosong && "mb-3", "md:mb-3")}>
+          <button
+            type="button"
+            onClick={() => setBukaKosong(!bukaKosong)}
+            aria-expanded={bukaKosong}
+            className="flex items-center gap-2 text-left text-sm font-semibold md:pointer-events-none"
+          >
             <ClipboardList size={16} className="text-primary" /> Kelengkapan data
             <span className="font-normal text-muted">
-              · {hitungKosong.total} jemaat {status === "semua" ? "" : status === "review" ? "perlu review" : status} ·
-              klik untuk melihat siapa saja
+              · {hitungKosong.per.filter((k) => k.n).length} kolom belum lengkap
+              <span className="hidden md:inline"> · klik untuk melihat siapa saja</span>
             </span>
-          </div>
+            <ChevronDown
+              size={15}
+              className={cn("text-muted transition-transform md:hidden", bukaKosong && "rotate-180")}
+            />
+          </button>
           {kosong && (
             <Button size="sm" onClick={() => setKosong("")}>
               <X size={13} /> Hapus filter
             </Button>
           )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className={cn("flex-wrap gap-2", bukaKosong ? "flex" : "hidden md:flex")}>
           {hitungKosong.per.map((k) => {
             const pct = hitungKosong.total ? k.n / hitungKosong.total : 0;
             return (
@@ -249,35 +285,39 @@ export default function JemaatPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            {/* Kolom nama (kiri) dan aksi (kanan) menempel seperti freeze column di Excel.
+                border-separate dipakai supaya sel yang menempel tetap membawa garisnya saat di-scroll. */}
+            <table className="w-full min-w-[820px] border-separate border-spacing-0 text-sm">
               <thead>
                 <tr className="text-left text-xs text-muted">
-                  <th className="px-4 py-3 font-medium">Nama</th>
-                  <th className="px-4 py-3 font-medium">Jenjang</th>
-                  <th className="px-4 py-3 font-medium">Umur</th>
-                  <th className="px-4 py-3 font-medium">No. WA</th>
-                  <th className="px-4 py-3 font-medium">GDG</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3" />
+                  <th className={cn(TH_STICKY, STICKY_KIRI, "z-20")}>Nama</th>
+                  <th className={TH}>Jenjang</th>
+                  <th className={TH}>Umur</th>
+                  <th className={TH}>No. WA</th>
+                  <th className={TH}>GDG</th>
+                  <th className={TH}>Status</th>
+                  <th className={cn(TH_STICKY, STICKY_KANAN, "z-20")}>
+                    <span className="sr-only">Aksi</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.id} className="border-t border-line transition hover:bg-tint/[0.025]">
-                    <td className="px-4 py-3">
+                  <tr key={r.id} className="group transition hover:bg-tint/[0.025]">
+                    <td className={cn(TD_STICKY, STICKY_KIRI)}>
                       <button onClick={() => setDetail(r)} className="text-left font-medium hover:text-primary">
                         {r.nama}
                       </button>
                       {r.perlu_review && (
-                        <span className="ml-2">
+                        <div className="mt-0.5">
                           <Badge color="yellow">review</Badge>
-                        </span>
+                        </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-muted">{jenjang(r)}</td>
-                    <td className="px-4 py-3 text-muted">{umur(r.tanggal_lahir) ?? "-"}</td>
-                    <td className="px-4 py-3 text-muted">{hpTampil(r.no_hp ?? r.no_hp_ortu)}</td>
-                    <td className="px-4 py-3">
+                    <td className={cn(TD, "whitespace-nowrap text-muted")}>{jenjang(r)}</td>
+                    <td className={cn(TD, "text-muted")}>{umur(r.tanggal_lahir) ?? "-"}</td>
+                    <td className={cn(TD, "whitespace-nowrap text-muted")}>{hpTampil(r.no_hp ?? r.no_hp_ortu)}</td>
+                    <td className={cn(TD, "whitespace-nowrap")}>
                       {gname(r.gdg_group_id) ? (
                         <span className="text-muted">
                           {gname(r.gdg_group_id)}
@@ -287,7 +327,7 @@ export default function JemaatPage() {
                         <span className="text-faint">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={TD}>
                       {r.status === "aktif" ? (
                         <Badge color="green">aktif</Badge>
                       ) : (
@@ -296,28 +336,34 @@ export default function JemaatPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className={cn(TD_STICKY, STICKY_KANAN)}>
                       <div className="flex items-center justify-end gap-1.5">
-                        {r.perlu_review && (
-                          <Button size="sm" variant="success" onClick={() => sudahDicek(r)} title="Sudah dicek">
-                            <CheckCheck size={13} />
-                          </Button>
-                        )}
-                        {r.status === "aktif" && <FollowUpButton jemaat={r} label="WA" />}
                         <Button size="sm" onClick={() => setEdit({ open: true, j: r })} title="Edit">
-                          <Pencil size={13} />
+                          <Pencil size={13} /> <span className="hidden min-[420px]:inline">Edit</span>
                         </Button>
-                        {r.status === "aktif" ? (
-                          <Button size="sm" onClick={() => setNonaktif(r)} title="Nonaktifkan">
-                            <Power size={13} />
+                        {/* Layar lebar: semua tombol terlihat. HP: sisanya dilipat ke tombol "..." */}
+                        <div className="hidden items-center gap-1.5 sm:flex">
+                          {r.perlu_review && (
+                            <Button size="sm" variant="success" onClick={() => sudahDicek(r)} title="Sudah dicek">
+                              <CheckCheck size={13} />
+                            </Button>
+                          )}
+                          {r.status === "aktif" && <FollowUpButton jemaat={r} label="WA" />}
+                          {r.status === "aktif" ? (
+                            <Button size="sm" onClick={() => setNonaktif(r)} title="Nonaktifkan">
+                              <Power size={13} />
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="success" onClick={() => aktifkan(r)} title="Aktifkan lagi">
+                              <UserCheck size={13} />
+                            </Button>
+                          )}
+                          <Button size="sm" variant="danger" onClick={() => setHapus(r)} title="Hapus permanen">
+                            <Trash2 size={13} />
                           </Button>
-                        ) : (
-                          <Button size="sm" variant="success" onClick={() => aktifkan(r)} title="Aktifkan lagi">
-                            <UserCheck size={13} />
-                          </Button>
-                        )}
-                        <Button size="sm" variant="danger" onClick={() => setHapus(r)} title="Hapus permanen">
-                          <Trash2 size={13} />
+                        </div>
+                        <Button size="sm" className="sm:hidden" onClick={() => setAksi(r)} title="Aksi lain" aria-label="Aksi lain">
+                          <MoreHorizontal size={14} />
                         </Button>
                       </div>
                     </td>
@@ -339,6 +385,84 @@ export default function JemaatPage() {
       <NonaktifModal jemaat={nonaktif} onClose={() => setNonaktif(null)} onSaved={load} />
       <HapusModal jemaat={hapus} onClose={() => setHapus(null)} onNonaktif={setNonaktif} onDeleted={load} />
       <JemaatDetail jemaat={detail} groups={groups} onClose={() => setDetail(null)} />
+      <AksiModal
+        j={aksi}
+        onClose={() => setAksi(null)}
+        onDetail={setDetail}
+        onEdit={(j) => setEdit({ open: true, j })}
+        onReview={sudahDicek}
+        onNonaktif={setNonaktif}
+        onAktifkan={aktifkan}
+        onHapus={setHapus}
+      />
     </>
+  );
+}
+
+/** Menu aksi untuk layar HP (tombol "..." di tiap baris) */
+function AksiModal({
+  j,
+  onClose,
+  onDetail,
+  onEdit,
+  onReview,
+  onNonaktif,
+  onAktifkan,
+  onHapus,
+}: {
+  j: Jemaat | null;
+  onClose: () => void;
+  onDetail: (j: Jemaat) => void;
+  onEdit: (j: Jemaat) => void;
+  onReview: (j: Jemaat) => void;
+  onNonaktif: (j: Jemaat) => void;
+  onAktifkan: (j: Jemaat) => void;
+  onHapus: (j: Jemaat) => void;
+}) {
+  const item =
+    "flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left text-sm transition hover:border-line-strong";
+  const jalankan = (fn: (j: Jemaat) => void) => () => {
+    if (!j) return;
+    onClose();
+    fn(j);
+  };
+  return (
+    <Modal open={!!j} onClose={onClose} title={j?.nama ?? ""}>
+      {j && (
+        <div className="space-y-2">
+          <button className={item} onClick={jalankan(onDetail)}>
+            <Eye size={16} className="text-muted" /> Lihat detail
+          </button>
+          <button className={item} onClick={jalankan(onEdit)}>
+            <Pencil size={16} className="text-muted" /> Edit data
+          </button>
+          {j.status === "aktif" && (
+            <div className={cn(item, "justify-between")}>
+              <span className="flex items-center gap-3">
+                <MessageCircle size={16} className="text-success" /> Follow up WhatsApp
+              </span>
+              <FollowUpButton jemaat={j} label="Buka WA" />
+            </div>
+          )}
+          {j.perlu_review && (
+            <button className={item} onClick={jalankan(onReview)}>
+              <CheckCheck size={16} className="text-success" /> Tandai sudah dicek
+            </button>
+          )}
+          {j.status === "aktif" ? (
+            <button className={item} onClick={jalankan(onNonaktif)}>
+              <Power size={16} className="text-muted" /> Nonaktifkan
+            </button>
+          ) : (
+            <button className={item} onClick={jalankan(onAktifkan)}>
+              <UserCheck size={16} className="text-success" /> Aktifkan lagi
+            </button>
+          )}
+          <button className={cn(item, "border-danger/30 text-danger")} onClick={jalankan(onHapus)}>
+            <Trash2 size={16} /> Hapus permanen
+          </button>
+        </div>
+      )}
+    </Modal>
   );
 }
