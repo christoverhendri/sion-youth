@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Donut, HBar, TrendArea } from "@/components/charts";
-import { Badge, Card, CardTitle, Empty, Loading, PageHeader } from "@/components/ui";
+import { Donut, HBar, TrendBars } from "@/components/charts";
+import { Av, Panel, PanelHead, Seg } from "@/components/sion";
+import { Empty, Loading, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { fetchAll, loadKehadiran, trenKehadiran, type Kehadiran } from "@/lib/data";
 import type { GdgGroup, Jemaat, Pelayanan } from "@/lib/types";
 import { addMonths, countBy, firstOfMonth, fmtDate, fmtMonth, jenjang } from "@/lib/utils";
 
 type AbsenGdg = { id: string; nama: string; gdg_group_id: string; absen_beruntun: number; total_sesi: number; total_hadir: number };
+type Tab = "kehadiran" | "jemaat" | "pelayanan";
 
 export default function AnalisisPage() {
   const [jemaat, setJemaat] = useState<Jemaat[] | null>(null);
@@ -17,6 +19,7 @@ export default function AnalisisPage() {
   const [absenGdg, setAbsenGdg] = useState<AbsenGdg[]>([]);
   const [keh, setKeh] = useState<Kehadiran>({ sesi: [], hadir: [] });
   const [bulan, setBulan] = useState(firstOfMonth());
+  const [tab, setTab] = useState<Tab>("kehadiran");
 
   useEffect(() => {
     const sb = createClient();
@@ -64,6 +67,7 @@ export default function AnalisisPage() {
       .filter((x) => nSesi > 0 && x.hadir / nSesi >= 0.75);
 
     const kuliah = all.filter((j) => j.status_akademik === "Kuliah");
+    const tren = trenKehadiran(keh, false);
 
     return {
       aktif,
@@ -81,8 +85,20 @@ export default function AnalisisPage() {
       retensi,
       kandidat,
       nSesi,
+      tren12: tren.slice(-12),
+      rata: tren.length ? Math.round(tren.reduce((s, t) => s + t.value, 0) / tren.length) : 0,
+      puncak: tren.length ? Math.max(...tren.map((t) => t.value)) : 0,
     };
   }, [jemaat, pel, keh]);
+
+  const absenList = useMemo(
+    () =>
+      absenGdg
+        .filter((x) => x.absen_beruntun >= 2)
+        .sort((x, y) => y.absen_beruntun - x.absen_beruntun)
+        .map((x) => ({ ...x, grup: groups.find((g) => g.id === x.gdg_group_id)?.nama ?? "Tanpa grup" })),
+    [absenGdg, groups],
+  );
 
   const baruBulan = useMemo(() => {
     const next = addMonths(bulan, 1);
@@ -97,212 +113,266 @@ export default function AnalisisPage() {
 
   return (
     <>
-      <PageHeader title="Analisis" sub={`Berdasarkan ${a.aktif.length} jemaat aktif`} />
+      <PageHeader
+        eyebrow="Analisis"
+        title="Membaca pertumbuhan."
+        sub={`Berdasarkan ${a.aktif.length} jemaat aktif, diperbarui setiap kali absensi disimpan.`}
+        action={
+          <Seg<Tab>
+            label="Bagian analisis"
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: "kehadiran", label: "Kehadiran" },
+              { value: "jemaat", label: "Jemaat" },
+              { value: "pelayanan", label: "Pelayanan" },
+            ]}
+          />
+        }
+      />
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card>
-          <CardTitle sub="Acuan memilih kegiatan Sion Fun Activity Day">Hobi jemaat</CardTitle>
-          <HBar data={a.hobi} />
-        </Card>
+      {tab === "kehadiran" && (
+        <div key="k" className="s-pane space-y-6">
+          <Panel>
+            <PanelHead
+              title="Kehadiran"
+              accent="ibadah"
+              sub={`${a.tren12.length} ibadah Sion terakhir · arahkan kursor ke batang`}
+              action={
+                <div className="flex gap-7">
+                  <div>
+                    <div className="text-[13px] text-muted">Rata-rata</div>
+                    <div className="text-[26px] font-extrabold tabular-nums">{a.rata}</div>
+                  </div>
+                  <div>
+                    <div className="text-[13px] text-muted">Tertinggi</div>
+                    <div className="text-[26px] font-extrabold tabular-nums text-primary">{a.puncak}</div>
+                  </div>
+                </div>
+              }
+            />
+            <TrendBars data={a.tren12} />
+          </Panel>
 
-        <Card>
-          <CardTitle sub="Jemaat aktif per jenjang">Proporsi SD / SMP / SMA / Kuliah / Kerja</CardTitle>
-          <Donut data={a.jenjang} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Jumlah jemaat yang sudah bisa melayani di bidang ini">Kemampuan penatalayan</CardTitle>
-          <HBar data={a.bisa} series={2} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Tertarik tapi belum bisa → acuan topik training / workshop">Mau belajar pelayanan</CardTitle>
-          <HBar data={a.mauBelajar} series={3} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Semua jemaat berstatus Kuliah (termasuk yang nonaktif)">Kuliah dalam vs luar negeri</CardTitle>
-          <Donut data={a.kuliah} />
-          {a.kuliahLuar.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {a.kuliahLuar.map((j) => (
-                <Badge key={j.id}>
-                  {j.nama}
-                  {j.kota_studi && ` · ${j.kota_studi}`}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <CardTitle sub="Absen 2× atau lebih berturut-turut di GDG grupnya">Sering tidak datang GDG</CardTitle>
-          {groups.length === 0 ? (
-            <Empty>Belum ada grup GDG.</Empty>
-          ) : (
-            <div className="space-y-4">
-              {groups.map((g) => {
-                const list = absenGdg
-                  .filter((x) => x.gdg_group_id === g.id && x.absen_beruntun >= 2)
-                  .sort((x, y) => y.absen_beruntun - x.absen_beruntun);
-                return (
-                  <div key={g.id}>
-                    <div className="mb-1.5 flex items-center justify-between text-sm">
-                      <span className="font-medium">{g.nama}</span>
-                      <span className="text-xs text-muted">{list.length} orang</span>
-                    </div>
-                    {list.length ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {list.map((x) => (
-                          <Badge key={x.id} color={x.absen_beruntun >= 3 ? "red" : "yellow"}>
-                            {x.nama} · {x.absen_beruntun}×
-                          </Badge>
-                        ))}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel>
+              <PanelHead title="Sering tidak datang" accent="GDG" sub="Absen 2× atau lebih berturut-turut di grupnya" />
+              {absenList.length === 0 ? (
+                <Empty>Semua rajin datang GDG.</Empty>
+              ) : (
+                <div className="max-h-[420px] overflow-y-auto px-[14px]">
+                  {absenList.map((x, i) => (
+                    <div key={x.id} className="s-row">
+                      <Av nama={x.nama} i={i} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bold">{x.nama}</div>
+                        <div className="s-sub">{x.grup}</div>
                       </div>
-                    ) : (
-                      <p className="text-xs text-faint">Semua rajin 👍</p>
-                    )}
+                      <span className={x.absen_beruntun >= 3 ? "s-chip bad" : "s-chip gold"}>{x.absen_beruntun}× absen</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+
+            <Panel>
+              <PanelHead title="Retensi" accent="jemaat baru" sub="Yang bergabung tiap bulan dan masih hadir di 4 ibadah terakhir" />
+              {a.retensi.map((r, i) => {
+                const pct = r.baru ? Math.round((r.tetap / r.baru) * 100) : 0;
+                return (
+                  <div key={r.bulan} className="s-hb" style={{ gridTemplateColumns: "110px minmax(0,1fr) 70px" }}>
+                    <span className="lbl">{fmtMonth(r.bulan)}</span>
+                    <span className="s-track">
+                      <i style={{ width: `${Math.max(2, pct)}%`, animationDelay: `${0.15 + i * 0.07}s` }} />
+                    </span>
+                    <span className="v">{r.baru ? `${r.tetap}/${r.baru}` : "—"}</span>
                   </div>
                 );
               })}
-            </div>
-          )}
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardTitle
-            sub="Siapa saja yang bergabung, kenal Sion dari mana, dan diajak siapa"
-            action={
-              <select className="field w-auto" value={bulan} onChange={(e) => setBulan(e.target.value)}>
-                {bulanOpsi.map((m) => (
-                  <option key={m} value={m}>
-                    {fmtMonth(m)}
-                  </option>
-                ))}
-              </select>
-            }
-          >
-            Jemaat baru
-          </CardTitle>
-          {baruBulan.length === 0 ? (
-            <Empty>Tidak ada jemaat baru di {fmtMonth(bulan)}.</Empty>
-          ) : (
-            <div className="grid gap-6 lg:grid-cols-5">
-              <div className="overflow-x-auto lg:col-span-3">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-muted">
-                      <th className="py-2 pr-3 font-medium">Nama</th>
-                      <th className="py-2 pr-3 font-medium">Jenjang</th>
-                      <th className="py-2 pr-3 font-medium">Kenal dari</th>
-                      <th className="py-2 pr-3 font-medium">Diajak oleh</th>
-                      <th className="py-2 font-medium">Bergabung</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {baruBulan.map((j) => (
-                      <tr key={j.id} className="border-t border-line">
-                        <td className="py-2 pr-3 font-medium">{j.nama}</td>
-                        <td className="py-2 pr-3 text-muted">{jenjang(j)}</td>
-                        <td className="py-2 pr-3 text-muted">{j.sumber_info ?? "-"}</td>
-                        <td className="py-2 pr-3 text-muted">{j.diajak_oleh_nama ?? "-"}</td>
-                        <td className="py-2 text-muted">{fmtDate(j.tanggal_bergabung, { year: undefined })}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="lg:col-span-2">
-                <div className="mb-2 text-xs font-medium text-muted">Sumber bulan ini</div>
-                <HBar data={countBy(baruBulan, (j) => j.sumber_info ?? "Belum diisi")} />
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardTitle sub="Jemaat terdata yang hadir, 26 ibadah Sion terakhir (minggu gabung/libur tidak dihitung)">
-            Tren kehadiran ibadah
-          </CardTitle>
-          <TrendArea data={trenKehadiran(keh, false)} height={260} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Dari jemaat yang bergabung tiap bulan, berapa yang masih hadir di 4 ibadah terakhir">
-            Retensi jemaat baru
-          </CardTitle>
-          <div className="space-y-3">
-            {a.retensi.map((r) => {
-              const pct = r.baru ? Math.round((r.tetap / r.baru) * 100) : 0;
-              return (
-                <div key={r.bulan}>
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span className="text-muted">{fmtMonth(r.bulan)}</span>
-                    <span>
-                      {r.baru ? (
-                        <>
-                          <b>{r.tetap}</b>/{r.baru} masih datang <span className="text-muted">({pct}%)</span>
-                        </>
-                      ) : (
-                        <span className="text-faint">tidak ada jemaat baru</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-tint/5">
-                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
+            </Panel>
           </div>
-        </Card>
+        </div>
+      )}
 
-        <Card>
-          <CardTitle sub="Total sepanjang waktu, untuk melihat channel yang paling efektif">Kenal Sion dari mana</CardTitle>
-          <HBar data={a.sumber} series={6} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Yang paling banyak mengajak teman baru, layak diapresiasi 🙌">Top pengajak</CardTitle>
-          <HBar data={a.inviter} max={8} series={4} />
-        </Card>
-
-        <Card>
-          <CardTitle sub="Berguna untuk lokasi GDG atau nebeng bareng">Sebaran domisili (kecamatan)</CardTitle>
-          <HBar data={a.kecamatan} max={10} />
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardTitle
-            sub={`Sudah bisa melayani + hadir ≥ 75% di ${a.nSesi || 8} ibadah terakhir: siap diajak melayani`}
-          >
-            Kandidat penatalayan
-          </CardTitle>
-          {a.kandidat.length === 0 ? (
-            <Empty>Belum ada data yang cukup (butuh data minat pelayanan & absensi).</Empty>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Object.entries(
-                a.kandidat.reduce<Record<string, typeof a.kandidat>>((m, k) => {
-                  (m[k.bidang] ??= []).push(k);
-                  return m;
-                }, {}),
-              ).map(([bidang, list]) => (
-                <div key={bidang} className="rounded-xl border border-line bg-surface p-3">
-                  <div className="mb-2 text-sm font-medium">{bidang}</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {list.map((k) => (
-                      <Badge key={k.jemaat_id} color="green">
-                        {k.j.nama} · {k.hadir}/{a.nSesi}
-                      </Badge>
+      {tab === "jemaat" && (
+        <div key="j" className="s-pane space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel>
+              <PanelHead title="Proporsi" accent="jenjang" sub="Jemaat aktif" />
+              <Donut data={a.jenjang} />
+            </Panel>
+            <Panel>
+              <PanelHead title="Sebaran" accent="domisili" sub="Untuk lokasi GDG atau nebeng bareng" />
+              <HBar data={a.kecamatan} max={8} />
+            </Panel>
+            <Panel>
+              <PanelHead title="Kenal Sion" accent="dari mana" sub="Channel paling efektif, sepanjang waktu" />
+              <HBar data={a.sumber} max={8} />
+            </Panel>
+            <Panel>
+              <PanelHead title="Top" accent="pengajak" sub="Paling banyak mengajak teman baru" />
+              {a.inviter.length === 0 ? (
+                <Empty>Belum ada data.</Empty>
+              ) : (
+                <div className="px-[14px]">
+                  {a.inviter.slice(0, 6).map((t, i) => (
+                    <div key={t.name} className="s-row">
+                      <span className="w-[22px] font-extrabold text-primary">{i + 1}</span>
+                      <Av nama={t.name} i={i} />
+                      <div className="min-w-0 flex-1 truncate font-bold">{t.name}</div>
+                      <span className="s-chip gold">{t.value} orang</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+            <Panel className="lg:col-span-2">
+              <PanelHead title="Kuliah dalam vs" accent="luar negeri" sub="Semua jemaat berstatus Kuliah, termasuk yang nonaktif" />
+              <div className="grid items-center gap-6 lg:grid-cols-2">
+                <Donut data={a.kuliah} label="mahasiswa" />
+                {a.kuliahLuar.length > 0 && (
+                  <div className="flex flex-wrap gap-2.5">
+                    {a.kuliahLuar.map((j) => (
+                      <span key={j.id} className="s-tag">
+                        {j.nama} {j.kota_studi && <b>{j.kota_studi}</b>}
+                      </span>
                     ))}
                   </div>
+                )}
+              </div>
+            </Panel>
+          </div>
+
+          <Panel>
+            <PanelHead
+              title="Jemaat"
+              accent="baru"
+              sub="Siapa yang bergabung, kenal Sion dari mana, dan diajak siapa"
+              action={
+                <label className="s-search !h-11 !flex-none !px-4">
+                  <span className="sr-only">Pilih bulan</span>
+                  <select className="bg-transparent text-sm font-semibold outline-none" value={bulan} onChange={(e) => setBulan(e.target.value)}>
+                    {bulanOpsi.map((m) => (
+                      <option key={m} value={m} className="bg-surface-solid">
+                        {fmtMonth(m)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              }
+            />
+            {baruBulan.length === 0 ? (
+              <Empty>Tidak ada jemaat baru di {fmtMonth(bulan)}.</Empty>
+            ) : (
+              <div className="grid gap-8 lg:grid-cols-5">
+                <div className="-mx-2 overflow-x-auto lg:col-span-3">
+                  <table className="s-tbl">
+                    <thead>
+                      <tr>
+                        <th>Nama</th>
+                        <th>Jenjang</th>
+                        <th>Kenal dari</th>
+                        <th>Diajak oleh</th>
+                        <th>Bergabung</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {baruBulan.map((j, i) => (
+                        <tr key={j.id}>
+                          <td>
+                            <div className="flex items-center gap-3">
+                              <Av nama={j.nama} i={i} size={34} />
+                              <span className="whitespace-nowrap font-bold">{j.nama}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="s-chip">{jenjang(j)}</span>
+                          </td>
+                          <td className="whitespace-nowrap text-muted">{j.sumber_info ?? "—"}</td>
+                          <td className="whitespace-nowrap text-muted">{j.diajak_oleh_nama ?? "—"}</td>
+                          <td className="whitespace-nowrap text-muted">{fmtDate(j.tanggal_bergabung, { year: undefined })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
+                <div className="lg:col-span-2">
+                  <div className="mb-2 text-[13px] font-bold text-muted">Sumber bulan ini</div>
+                  <HBar data={countBy(baruBulan, (j) => j.sumber_info ?? "Belum diisi")} />
+                </div>
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
+
+      {tab === "pelayanan" && (
+        <div key="p" className="s-pane space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel>
+              <PanelHead title="Kemampuan" accent="penatalayan" sub="Yang sudah bisa melayani di bidang ini" />
+              <HBar data={a.bisa} />
+            </Panel>
+            <Panel>
+              <PanelHead title="Mau belajar" accent="pelayanan" sub="Acuan topik training dan workshop" />
+              <HBar data={a.mauBelajar} />
+            </Panel>
+          </div>
+
+          <Panel>
+            <PanelHead title="Hobi" accent="jemaat" sub="Acuan memilih kegiatan Sion Fun Activity Day" />
+            {a.hobi.length === 0 ? (
+              <Empty>Belum ada data.</Empty>
+            ) : (
+              <div className="stagger flex flex-wrap gap-2.5">
+                {a.hobi.map((h) => (
+                  <span key={h.name} className="s-tag">
+                    {h.name} <b>{h.value}</b>
+                  </span>
+                ))}
+              </div>
+            )}
+          </Panel>
+
+          <Panel>
+            <PanelHead
+              title="Kandidat"
+              accent="penatalayan"
+              sub={`Sudah bisa melayani dan hadir ≥ 75% di ${a.nSesi || 8} ibadah terakhir: siap diajak melayani`}
+            />
+            {a.kandidat.length === 0 ? (
+              <Empty>Belum ada data yang cukup (butuh data minat pelayanan dan absensi).</Empty>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Object.entries(
+                  a.kandidat.reduce<Record<string, typeof a.kandidat>>((m, k) => {
+                    (m[k.bidang] ??= []).push(k);
+                    return m;
+                  }, {}),
+                ).map(([bidang, list]) => (
+                  <div key={bidang} className="s-pick">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold">{bidang}</span>
+                      <span className="s-chip gold">{list.length} orang</span>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {list.map((k, i) => (
+                        <span key={k.jemaat_id} className="inline-flex items-center gap-2 text-sm font-semibold">
+                          <Av nama={k.j.nama} i={i} size={28} />
+                          {k.j.nama}
+                          <span className="text-xs text-muted">
+                            {k.hadir}/{a.nSesi}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+        </div>
+      )}
     </>
   );
 }

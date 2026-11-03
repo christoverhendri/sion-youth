@@ -2,10 +2,16 @@
 
 import { X } from "lucide-react";
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { CountUp } from "./effects";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("glass rounded-2xl p-5", className)}>{children}</div>;
+export function Card({ className, children, tilt }: { className?: string; children: React.ReactNode; tilt?: boolean }) {
+  return (
+    <div data-tilt={tilt || undefined} className={cn("glass rounded-[26px] p-5 sm:p-7", className)}>
+      {children}
+    </div>
+  );
 }
 
 export function CardTitle({
@@ -18,10 +24,10 @@ export function CardTitle({
   sub?: React.ReactNode;
 }) {
   return (
-    <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="mb-5 flex items-start justify-between gap-3">
       <div>
-        <h3 className="text-[15px] font-semibold">{children}</h3>
-        {sub && <p className="mt-0.5 text-xs text-muted">{sub}</p>}
+        <h3 className="text-[17px] font-bold">{children}</h3>
+        {sub && <p className="mt-0.5 text-[13px] text-muted">{sub}</p>}
       </div>
       {action}
     </div>
@@ -32,23 +38,40 @@ export function PageHeader({
   title,
   sub,
   action,
+  eyebrow,
 }: {
   title: string;
   sub?: string;
   action?: React.ReactNode;
+  eyebrow?: string;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {sub && <p className="mt-1 text-sm text-muted">{sub}</p>}
+        {eyebrow && <div className="eyebrow mb-3">{eyebrow}</div>}
+        <h1 className="text-[36px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[52px]">
+          <AccentTitle text={title} />
+        </h1>
+        {sub && <p className="mt-3 max-w-2xl text-[15px] text-muted sm:text-base">{sub}</p>}
       </div>
-      {action && <div className="flex flex-wrap gap-2">{action}</div>}
+      {action && <div className="flex flex-wrap items-center gap-2.5">{action}</div>}
     </div>
   );
 }
 
-type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+/** Kata terakhir judul ditulis serif miring emas, seperti "grows" di referensi desain */
+export function AccentTitle({ text }: { text: string }) {
+  const i = text.lastIndexOf(" ");
+  if (i < 0) return <span className="accent-serif">{text}</span>;
+  return (
+    <>
+      {text.slice(0, i + 1)}
+      <span className="accent-serif">{text.slice(i + 1)}</span>
+    </>
+  );
+}
+
+type BtnProps =React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "ghost" | "danger" | "success";
   size?: "sm" | "md";
 };
@@ -58,13 +81,12 @@ export function Button({ variant = "ghost", size = "md", className, ...p }: BtnP
     <button
       {...p}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-xl font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
-        size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2.5 text-sm",
-        variant === "primary" &&
-          "bg-gradient-to-b from-[#5b86ff] to-primary-2 text-white shadow-[0_8px_24px_-8px_rgba(79,124,255,0.7)] hover:brightness-110",
-        variant === "ghost" && "border border-line bg-surface-2 text-ink hover:border-line-strong hover:bg-tint/10",
-        variant === "danger" && "border border-danger/30 bg-danger/10 text-danger hover:bg-danger/20",
-        variant === "success" && "border border-success/30 bg-success/10 text-success hover:bg-success/20",
+        "pressable inline-flex items-center justify-center gap-2 rounded-full font-medium disabled:cursor-not-allowed disabled:opacity-40",
+        size === "sm" ? "min-h-9 px-4 py-1.5 text-xs" : "min-h-11 px-5 py-2 text-sm",
+        variant === "primary" && "btn-gold font-semibold",
+        variant === "ghost" && "btn-ghost",
+        variant === "danger" && "border border-danger/25 bg-danger/10 text-danger hover:bg-danger/15",
+        variant === "success" && "border border-success/25 bg-success/10 text-success hover:bg-success/15",
         className,
       )}
     />
@@ -90,10 +112,10 @@ export function LinkButton({
       target={external ? "_blank" : undefined}
       rel={external ? "noreferrer" : undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition",
-        variant === "primary" && "bg-primary text-white hover:brightness-110",
-        variant === "ghost" && "border border-line bg-surface-2 hover:bg-tint/10",
-        variant === "success" && "border border-success/30 bg-success/10 text-success hover:bg-success/20",
+        "pressable inline-flex min-h-8 items-center justify-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium",
+        variant === "primary" && "btn-gold font-semibold",
+        variant === "ghost" && "btn-ghost",
+        variant === "success" && "border border-success/25 bg-success/10 text-success hover:bg-success/15",
         className,
       )}
     >
@@ -103,19 +125,19 @@ export function LinkButton({
 }
 
 const BADGE: Record<string, string> = {
-  blue: "bg-primary/15 text-badge-blue border-primary/25",
-  green: "bg-success/12 text-success border-success/25",
-  yellow: "bg-warning/12 text-warning border-warning/25",
-  red: "bg-danger/12 text-danger border-danger/25",
-  gray: "bg-tint/5 text-muted border-line",
-  purple: "bg-[#8b5cf6]/15 text-badge-purple border-[#8b5cf6]/25",
+  blue: "bg-steel/15 text-badge-blue",
+  green: "bg-gold/15 text-primary",
+  yellow: "bg-warning/14 text-warning",
+  red: "bg-danger/12 text-danger",
+  gray: "bg-tint/[0.06] text-muted",
+  purple: "bg-badge-purple/14 text-badge-purple",
 };
 
 export function Badge({ color = "gray", children }: { color?: keyof typeof BADGE | string; children: React.ReactNode }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums",
         BADGE[color] ?? BADGE.gray,
       )}
     >
@@ -137,9 +159,9 @@ export function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block text-xs font-medium text-muted">{label}</span>
+      <span className="mb-1.5 block text-[13px] font-medium text-muted">{label}</span>
       {children}
-      {hint && <span className="mt-1 block text-[11px] text-faint">{hint}</span>}
+      {hint && <span className="mt-1.5 block text-xs text-faint">{hint}</span>}
     </label>
   );
 }
@@ -164,25 +186,35 @@ export function Modal({
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose]);
   if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
-      <div className="absolute inset-0" onClick={onClose} />
+  // Dipasang di <body>: kartu kaca (backdrop-filter) & kartu 3D (transform) akan
+  // membuat position: fixed menempel ke kartu, bukan ke layar.
+  const isi = (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+      <div className="anim-scrim fixed inset-0 bg-[#03060c]/60 backdrop-blur-sm" onClick={onClose} />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
         className={cn(
-          "relative w-full rounded-2xl border border-line-strong bg-surface-solid p-6 shadow-2xl",
+          "anim-pop relative w-full rounded-[30px] border border-line bg-[var(--nav-pop)] p-6 shadow-pop backdrop-blur-2xl sm:p-8",
           wide ? "max-w-3xl" : "max-w-lg",
         )}
       >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 text-muted hover:bg-tint/10 hover:text-ink">
-            <X size={18} />
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em]">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="pressable grid h-10 w-10 place-items-center rounded-full border border-line text-muted hover:border-gold/50 hover:text-ink"
+          >
+            <X size={16} />
           </button>
         </div>
         {children}
       </div>
     </div>
   );
+  return typeof document === "undefined" ? isi : createPortal(isi, document.body);
 }
 
 export function Stat({
@@ -197,28 +229,52 @@ export function Stat({
   icon?: React.ReactNode;
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between text-xs text-muted">
+    <Card tilt className="group p-5 sm:p-6">
+      <div className="flex items-center justify-between gap-2 text-[13px] font-semibold text-muted">
         {label}
-        {icon && <span className="text-faint">{icon}</span>}
+        {icon && (
+          <span
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] border border-gold/30 bg-gold/10 text-gold-hi shadow-[0_0_18px_-6px_rgba(198,161,91,0.7)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-6"
+            aria-hidden
+          >
+            {icon}
+          </span>
+        )}
       </div>
-      <div className="mt-2 text-3xl font-bold tracking-tight">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted">{sub}</div>}
+      <div className="mt-4 text-[38px] font-bold leading-none tracking-[-0.03em] tabular-nums">
+        {typeof value === "number" ? <CountUp value={value} /> : value}
+      </div>
+      {sub && <div className="mt-2 text-xs text-muted">{sub}</div>}
     </Card>
   );
 }
 
 export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">{children}</div>;
+  return <div className="rounded-[22px] bg-surface-2 px-6 py-10 text-center text-sm text-muted">{children}</div>;
 }
 
 export function Loading() {
-  return <div className="p-10 text-center text-sm text-muted">Memuat…</div>;
+  return (
+    <div className="anim-scrim grid min-h-[50vh] place-items-center content-center gap-5 p-16 text-sm" role="status">
+      <div className="loader" aria-hidden>
+        <span />
+        <span />
+        <span className="orbit" />
+        <span className="orbit inner" />
+        <span className="core" />
+      </div>
+      <span className="shimmer-text font-medium tracking-wide">Memuat…</span>
+    </div>
+  );
 }
 
 export function ErrorText({ children }: { children: React.ReactNode }) {
   if (!children) return null;
-  return <p className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{children}</p>;
+  return (
+    <p role="alert" className="rounded-xl bg-danger/10 px-3.5 py-2.5 text-sm text-danger">
+      {children}
+    </p>
+  );
 }
 
 export function Chips({
@@ -238,10 +294,13 @@ export function Chips({
           <button
             type="button"
             key={o}
+            aria-pressed={on}
             onClick={() => onChange(on ? value.filter((x) => x !== o) : [...value, o])}
             className={cn(
-              "rounded-full border px-3 py-1.5 text-xs transition",
-              on ? "border-primary bg-primary/20 text-ink" : "border-line bg-surface text-muted hover:text-ink",
+              "pressable min-h-8 rounded-full px-3.5 py-1.5 text-xs font-medium",
+              on
+                ? "bg-gold/15 text-ink shadow-[inset_0_0_0_1px_rgba(198,161,91,0.55),0_4px_14px_-6px_rgba(198,161,91,0.6)]"
+                : "border border-line bg-surface-2 text-muted hover:border-gold/40 hover:text-ink",
             )}
           >
             {o}

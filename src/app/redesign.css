@@ -1,0 +1,374 @@
+/* ===== Redesain: nav kapsul melayang, sakelar tema, layar pembuka ===== */
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+/* Nav kaca yang melayang di atas konten (konten tetap terlihat di belakangnya) */
+.navpill {
+  background: var(--sidebar);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: 0 20px 60px -30px rgba(0, 0, 0, 0.6);
+  animation: nav-in 0.9s var(--ease-out) backwards;
+}
+:root[data-theme="light"] .navpill {
+  box-shadow: 0 20px 60px -30px rgba(38, 53, 77, 0.35);
+}
+@keyframes nav-in {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.97);
+  }
+}
+.navlink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 15px;
+  border-radius: 9999px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    color 0.25s,
+    background-color 0.25s,
+    transform 0.14s ease-out;
+}
+.navlink:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.navlink:active {
+  transform: scale(0.96);
+}
+/* titik emas di bawah menu aktif, muncul dengan pantulan */
+.navlink::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #c6a15b;
+  box-shadow: 0 0 10px #e3c68a;
+  transform: translateX(-50%) scale(0);
+  transition: transform 0.4s var(--spring);
+}
+.navlink[data-on] {
+  color: var(--text);
+}
+.navlink[data-on]::after {
+  transform: translateX(-50%) scale(1);
+}
+.navlink .chev {
+  transition: transform 0.3s var(--ease-out);
+}
+.navlink[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+
+/* Dropdown: muncul dari tombol pemicunya, menutup lewat jalur yang sama */
+.navmenu {
+  position: absolute;
+  top: calc(100% + 12px);
+  min-width: 240px;
+  padding: 8px;
+  border-radius: 20px;
+  background: var(--nav-pop);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(22px);
+  box-shadow: var(--shadow-pop);
+  opacity: 0;
+  visibility: hidden;
+  filter: blur(4px);
+  transform: translateY(-6px) scale(0.96);
+  transition:
+    opacity 0.22s ease,
+    transform 0.35s var(--ease-out),
+    filter 0.3s ease,
+    visibility 0s 0.35s;
+  z-index: 50;
+}
+.navmenu[data-open] {
+  opacity: 1;
+  visibility: visible;
+  filter: none;
+  transform: none;
+  transition:
+    opacity 0.22s ease,
+    transform 0.35s var(--ease-out),
+    filter 0.3s ease;
+}
+.navmenu a,
+.navmenu button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: background-color 0.2s;
+}
+.navmenu a:hover,
+.navmenu button:hover,
+.navmenu a[aria-current="page"] {
+  background: var(--surface-2);
+}
+.navsheet {
+  animation: sheet-in 0.4s var(--ease-out) backwards;
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+    filter: blur(4px);
+  }
+}
+
+/* Sakelar tema: matahari meluncur & berputar jadi bulan sabit, bintang berkelip */
+.tg {
+  position: relative;
+  width: 66px;
+  height: 36px;
+  flex: none;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: #ece5d6;
+  overflow: hidden;
+  transition:
+    background-color 0.7s ease,
+    border-color 0.3s,
+    transform 0.14s ease-out;
+}
+.tg[data-dark] {
+  background: #111a29;
+}
+.tg:hover {
+  border-color: rgba(198, 161, 91, 0.6);
+}
+.tg:active {
+  transform: scale(0.94);
+}
+.tg .knob {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: linear-gradient(160deg, #f7e6bc, #c6a15b);
+  box-shadow: 0 0 18px rgba(227, 198, 138, 0.75);
+  transition:
+    transform 0.7s cubic-bezier(0.68, -0.35, 0.27, 1.35),
+    background 0.7s ease,
+    box-shadow 0.7s ease;
+}
+.tg .bite {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #111a29;
+  transform: scale(0);
+  transition: transform 0.6s cubic-bezier(0.68, -0.35, 0.27, 1.35) 0.1s;
+}
+.tg .ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 5px;
+  margin: -2.5px 0 0 -1px;
+  border-radius: 2px;
+  background: #e3c68a;
+  transition: opacity 0.4s ease;
+}
+.tg .star {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #faf8f3;
+  opacity: 0;
+  transform: scale(0);
+  transition:
+    opacity 0.4s ease,
+    transform 0.5s var(--spring);
+}
+.tg[data-dark] .knob {
+  transform: translateX(30px) rotate(-260deg);
+  background: linear-gradient(160deg, #f2f4f8, #99a7bd);
+  box-shadow: 0 0 16px rgba(153, 167, 189, 0.55);
+}
+.tg[data-dark] .bite {
+  transform: scale(1);
+}
+.tg[data-dark] .ray {
+  opacity: 0;
+}
+.tg[data-dark] .star {
+  opacity: 1;
+  transform: scale(1);
+  animation: twinkle 2.6s ease-in-out infinite;
+}
+.tg[data-dark] .star:nth-child(2) {
+  animation-delay: 0.6s;
+}
+.tg[data-dark] .star:nth-child(3) {
+  animation-delay: 1.2s;
+}
+@keyframes twinkle {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Titik notifikasi yang berdenyut */
+.ping-dot {
+  animation: ping-dot 2.4s ease-out infinite;
+}
+@keyframes ping-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(198, 161, 91, 0.7);
+  }
+  80%,
+  100% {
+    box-shadow: 0 0 0 9px rgba(198, 161, 91, 0);
+  }
+}
+
+/* Label kecil di atas judul halaman */
+.eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+:root:not([data-theme="light"]) .eyebrow {
+  color: var(--gold-hi);
+}
+
+/* Kilau yang berjalan di sepanjang pita emas latar */
+.backdrop .ribbon path.gleam {
+  stroke: #f3dda8;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 90 1900;
+  stroke-dashoffset: 1990;
+  animation: gleam 9s linear infinite;
+  filter: drop-shadow(0 0 6px #e3c68a);
+}
+@keyframes gleam {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.backdrop .dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(var(--tint) / 0.1) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 45% at 50% 10%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 45% at 50% 10%, #000 30%, transparent 75%);
+}
+
+/* Layar pembuka: logo tergambar, lalu bar emas terisi */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background: var(--bg);
+  pointer-events: none;
+  animation: intro-out 0.8s cubic-bezier(0.7, 0, 0.3, 1) 1.3s forwards;
+}
+.intro path {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: intro-draw 1s ease 0.1s forwards;
+}
+.intro .bar {
+  width: 160px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.intro .bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #e3c68a, #c6a15b);
+  transform: translateX(-100%);
+  animation: intro-load 1.15s cubic-bezier(0.6, 0, 0.2, 1) 0.1s forwards;
+}
+@keyframes intro-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1.04);
+  }
+}
+@keyframes intro-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes intro-load {
+  to {
+    transform: none;
+  }
+}
+
+/* Judul besar yang muncul kata demi kata */
+.word-in {
+  display: inline-block;
+  animation: word-in 1s var(--ease-out) backwards;
+}
+@keyframes word-in {
+  from {
+    opacity: 0;
+    transform: translateY(32px) rotate(3deg);
+    filter: blur(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navpill,
+  .navsheet,
+  .tg *,
+  .ping-dot,
+  .backdrop .ribbon path.gleam,
+  .word-in {
+    animation: none !important;
+    transition: none !important;
+  }
+  .intro {
+    display: none;
+  }
+  .navmenu {
+    transform: none;
+    filter: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .navpill {
+    background: var(--surface-solid);
+    backdrop-filter: none;
+  }
+}

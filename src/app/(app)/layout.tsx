@@ -3,12 +3,13 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { MeProvider } from "@/components/role";
 import { Shell } from "@/components/shell";
+import { Loading } from "@/components/ui";
 import { getSessionProfile } from "@/lib/supabase/server";
 
 // Halaman di dalam (app) butuh login, jadi dirender per request (membaca cookie sesi).
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <Suspense fallback={<div className="app-glow min-h-screen" />}>
+    <Suspense fallback={<Loading />}>
       <Gate>{children}</Gate>
     </Suspense>
   );

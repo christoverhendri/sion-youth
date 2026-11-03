@@ -51,9 +51,9 @@ export function FollowUpButton({
         target="_blank"
         rel="noreferrer"
         onClick={() => setTimeout(() => setOpen(true), 400)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success transition hover:bg-success/20"
+        className="s-wa"
       >
-        <MessageCircle size={13} /> {label}
+        <MessageCircle size={14} /> {label}
       </a>
       <Modal open={open} onClose={() => setOpen(false)} title={`Catat follow-up ${jemaat.nama}`}>
         <div className="space-y-4">

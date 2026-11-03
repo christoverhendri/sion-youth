@@ -1,56 +1,73 @@
 @import "tailwindcss";
 
-/* Tema gelap (default) */
+/* Palet: emas #C6A15B · navy #26354D · ivory #FAF8F3 · baja #99A7BD.
+   Tema gelap (default): navy pekat, kartu kaca, aksen emas yang berpendar. */
 :root {
-  --bg: #060a17;
-  --surface: rgba(255, 255, 255, 0.035);
-  --surface-2: rgba(255, 255, 255, 0.06);
-  --surface-solid: #0e1529;
-  --sidebar: rgba(7, 12, 28, 0.82);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.14);
-  --text: #e8ecf7;
-  --muted: #8b94b0;
-  --faint: #5d6684;
-  --tint: 255 255 255; /* warna overlay hover/selected */
-  --primary: #4f7cff;
-  --primary-2: #3a64e8;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
-  --badge-blue: #8fb0ff;
-  --badge-purple: #b9a1ff;
-  --glass-top: rgba(255, 255, 255, 0.05);
-  --glass-bottom: rgba(255, 255, 255, 0.02);
-  --glow-1: rgba(79, 124, 255, 0.18);
-  --glow-2: rgba(109, 76, 255, 0.14);
+  --bg: #0a0f19;
+  --surface: rgba(20, 30, 46, 0.55);
+  --surface-2: rgba(153, 167, 189, 0.09);
+  --surface-solid: #101826;
+  --sidebar: rgba(20, 30, 46, 0.6);
+  --nav-pop: rgba(22, 32, 50, 0.92);
+  --border: rgba(153, 167, 189, 0.15);
+  --border-strong: rgba(153, 167, 189, 0.26);
+  --text: #faf8f3;
+  --muted: #a3b0c4;
+  --faint: #6b7890;
+  --tint: 250 248 243; /* warna overlay hover/selected */
+  --primary: #c6a15b;
+  --primary-2: #b08a45;
+  --on-primary: #141c2b;
+  --gold-hi: #ead096;
+  --success: #a9c4f0;
+  --warning: #e3c68a;
+  --danger: #f2a69a;
+  --badge-blue: #a9bbdb;
+  --badge-purple: #c9b4e0;
+  --seg-on: #26354d;
+  --glass-top: rgba(38, 53, 77, 0.42);
+  --glass-bottom: rgba(14, 21, 35, 0.55);
+  --glow: rgba(198, 161, 91, 0.35);
+  --orb-gold: rgba(198, 161, 91, 0.2);
+  --orb-steel: rgba(153, 167, 189, 0.14);
+  --orb-navy: rgba(38, 53, 77, 0.75);
+  --shadow-card: inset 0 1px 0 rgba(250, 248, 243, 0.05), 0 24px 48px -28px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 30px 80px -20px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(198, 161, 91, 0.12);
   color-scheme: dark;
 }
 
-/* Tema terang */
+/* Tema terang: ivory hangat, teks navy, emas lebih gelap supaya terbaca */
 :root[data-theme="light"] {
-  --bg: #f3f5fa;
-  --surface: rgba(15, 23, 42, 0.025);
-  --surface-2: #ffffff;
+  --bg: #faf8f3;
+  --surface: rgba(255, 255, 255, 0.72);
+  --surface-2: rgba(38, 53, 77, 0.06);
   --surface-solid: #ffffff;
-  --sidebar: rgba(255, 255, 255, 0.85);
-  --border: rgba(15, 23, 42, 0.09);
-  --border-strong: rgba(15, 23, 42, 0.16);
-  --text: #111827;
-  --muted: #5b6478;
-  --faint: #8a93a6;
-  --tint: 15 23 42;
-  --primary: #3a64e8;
-  --primary-2: #2f55d4;
-  --success: #059669;
-  --warning: #b45309;
-  --danger: #dc2626;
-  --badge-blue: #2f55d4;
-  --badge-purple: #6d28d9;
-  --glass-top: rgba(255, 255, 255, 0.95);
-  --glass-bottom: rgba(255, 255, 255, 0.8);
-  --glow-1: rgba(79, 124, 255, 0.12);
-  --glow-2: rgba(139, 92, 246, 0.08);
+  --sidebar: rgba(255, 255, 255, 0.66);
+  --nav-pop: rgba(255, 255, 255, 0.94);
+  --border: rgba(38, 53, 77, 0.12);
+  --border-strong: rgba(38, 53, 77, 0.2);
+  --text: #141c2b;
+  --muted: #556178;
+  --faint: #7a8599;
+  --tint: 38 53 77;
+  --primary: #86662a;
+  --primary-2: #7a5a1f;
+  --on-primary: #ffffff;
+  --gold-hi: #c6a15b;
+  --success: #355c9e;
+  --warning: #86662a;
+  --danger: #b4402f;
+  --badge-blue: #3d5378;
+  --badge-purple: #6b4a8f;
+  --seg-on: #ffffff;
+  --glass-top: rgba(255, 255, 255, 0.88);
+  --glass-bottom: rgba(255, 255, 255, 0.66);
+  --glow: rgba(198, 161, 91, 0.3);
+  --orb-gold: rgba(198, 161, 91, 0.22);
+  --orb-steel: rgba(153, 167, 189, 0.28);
+  --orb-navy: rgba(153, 167, 189, 0.16);
+  --shadow-card: 0 1px 2px rgba(38, 53, 77, 0.05), 0 16px 36px -20px rgba(38, 53, 77, 0.22);
+  --shadow-pop: 0 30px 80px -24px rgba(38, 53, 77, 0.35), 0 0 0 1px rgba(198, 161, 91, 0.18);
   color-scheme: light;
 }
 
@@ -68,58 +85,127 @@
   --color-tint: rgb(var(--tint));
   --color-primary: var(--primary);
   --color-primary-2: var(--primary-2);
+  --color-on-primary: var(--on-primary);
+  --color-gold: #c6a15b;
+  --color-gold-hi: var(--gold-hi);
+  --color-navy: #26354d;
+  --color-ivory: #faf8f3;
+  --color-steel: #99a7bd;
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
   --color-badge-blue: var(--badge-blue);
   --color-badge-purple: var(--badge-purple);
-  --font-sans: var(--font-jakarta);
+  --font-sans: var(--font-sans-src), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: var(--font-serif-src), "Times New Roman", serif;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-jakarta), system-ui, sans-serif;
+  font-family: var(--font-sans-src), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  line-height: 1.5;
   min-height: 100vh;
 }
 
-/* Cahaya biru di latar, seperti referensi desain */
-.app-glow {
-  background:
-    radial-gradient(900px 500px at 85% -10%, var(--glow-1), transparent 60%),
-    radial-gradient(700px 500px at -10% 110%, var(--glow-2), transparent 60%),
-    var(--bg);
+h1,
+h2 {
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+}
+h3 {
+  letter-spacing: -0.012em;
 }
 
-/* Komponen dasar. Berada di layer "components" supaya kelas utility Tailwind
-   (w-auto, pl-9, py-1.5, text-xs, ...) bisa menimpanya. Di luar layer, CSS ini akan selalu menang. */
+/* Kata aksen: serif miring berwarna emas, seperti "grows" di referensi */
+.accent-serif {
+  font-family: var(--font-serif-src), "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 1.12em;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  background: linear-gradient(100deg, var(--gold-hi), #c6a15b 55%, #a8843f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-right: 0.06em;
+}
+
+/* Latar lama; sekarang transparan karena latar animasi ada di <Backdrop /> */
+.app-glow {
+  background: transparent;
+}
+
 @layer components {
+  /* Kartu kaca: gradasi navy, garis tipis, sorotan emas mengikuti kursor (lihat components/effects.tsx) */
   .glass {
+    position: relative;
+    isolation: isolate;
     background: linear-gradient(180deg, var(--glass-top), var(--glass-bottom));
     border: 1px solid var(--border);
-    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px) saturate(140%);
+    transition:
+      border-color 0.3s,
+      box-shadow 0.3s;
   }
-  :root[data-theme="light"] .glass {
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px -12px rgba(15, 23, 42, 0.08);
+  .glass::before,
+  .glass::after {
+    content: "";
+    position: absolute;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  /* cahaya lembut di dalam kartu */
+  .glass::before {
+    inset: 0;
+    z-index: -1;
+    background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 0%), rgba(198, 161, 91, 0.09), transparent 45%);
+  }
+  /* tepi emas yang menyala di dekat kursor */
+  .glass::after {
+    inset: -1px;
+    padding: 1px;
+    background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgba(234, 208, 150, 0.7), transparent 60%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+  .glass:hover::before,
+  .glass:hover::after {
+    opacity: 1;
   }
 
   .field {
     width: 100%;
-    background: rgb(var(--tint) / 0.04);
+    background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: 0.75rem;
     padding: 0.6rem 0.85rem;
     color: var(--text);
-    font-size: 0.9rem;
+    font-size: 0.9375rem;
     outline: none;
-    transition: border-color 0.15s, background 0.15s;
+    transition:
+      border-color 0.2s,
+      box-shadow 0.25s,
+      background 0.2s;
   }
-  :root[data-theme="light"] .field {
-    background: #ffffff;
+  .field:hover {
+    border-color: var(--border-strong);
   }
   .field:focus {
-    border-color: var(--primary);
-    background: rgba(79, 124, 255, 0.06);
+    border-color: rgba(198, 161, 91, 0.7);
+    box-shadow:
+      0 0 0 4px rgba(198, 161, 91, 0.16),
+      0 0 24px -6px var(--glow);
   }
   .field::placeholder {
     color: var(--faint);
@@ -127,6 +213,394 @@ body {
   select.field option {
     background: var(--surface-solid);
   }
+
+  /* Kontrol segmen: lintasan gelap, pilihan aktif terangkat dengan garis emas */
+  .seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 9999px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .seg > button {
+    border-radius: 9999px;
+    padding: 0.3rem 0.85rem;
+    color: var(--muted);
+    transition:
+      background-color 0.25s,
+      color 0.25s,
+      box-shadow 0.25s;
+  }
+  .seg > button:hover {
+    color: var(--text);
+  }
+  .seg > button[aria-pressed="true"] {
+    background: var(--seg-on);
+    color: var(--text);
+    font-weight: 500;
+    box-shadow:
+      inset 0 0 0 1px rgba(198, 161, 91, 0.35),
+      0 4px 14px -6px var(--glow);
+  }
+
+  /* Umpan balik tekan: langsung saat pointer turun */
+  .pressable {
+    transition:
+      transform 0.14s ease-out,
+      background-color 0.2s,
+      border-color 0.2s,
+      color 0.2s,
+      box-shadow 0.25s,
+      opacity 0.2s,
+      filter 0.2s;
+  }
+  .pressable:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  /* Tombol emas yang berpendar + kilau menyapu saat hover */
+  .btn-gold {
+    position: relative;
+    overflow: hidden;
+    color: #141c2b;
+    background: linear-gradient(180deg, #e6c98a, #c6a15b 60%, #b48d48);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      0 8px 24px -8px rgba(198, 161, 91, 0.65),
+      0 0 0 1px rgba(198, 161, 91, 0.5);
+  }
+  .btn-gold:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 10px 34px -6px rgba(198, 161, 91, 0.85),
+      0 0 0 1px rgba(234, 208, 150, 0.7);
+  }
+  .btn-gold::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.55) 50%, transparent 70%);
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+  .btn-gold:hover:not(:disabled)::after {
+    transform: translateX(120%);
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .btn-gold svg,
+  .btn-ghost svg {
+    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .btn-gold:hover svg,
+  .btn-ghost:hover svg {
+    transform: translateX(1px) scale(1.08);
+  }
+
+  .btn-ghost {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: rgba(198, 161, 91, 0.45);
+    background: rgb(var(--tint) / 0.08);
+    box-shadow: 0 6px 20px -10px var(--glow);
+  }
+
+  /* Kartu 3D: dimiringkan oleh components/effects.tsx lewat --rx/--ry */
+  [data-tilt] {
+    transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(0);
+    transition:
+      transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 0.3s,
+      box-shadow 0.3s;
+    will-change: transform;
+  }
+  [data-tilt][data-tilting] {
+    transition:
+      transform 0.12s ease-out,
+      border-color 0.3s,
+      box-shadow 0.3s;
+  }
+  [data-tilt]:hover {
+    border-color: rgba(198, 161, 91, 0.3);
+    box-shadow:
+      var(--shadow-card),
+      0 24px 50px -24px var(--glow);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.field:focus-visible {
+  outline: none;
+}
+
+/* ===== Animasi ===== */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+    filter: blur(6px);
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+    filter: blur(4px);
+  }
+}
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes check-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  55% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pulse-core {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(198, 161, 91, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(198, 161, 91, 0);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+@keyframes drift-a {
+  50% {
+    transform: translate3d(8vw, 6vh, 0) scale(1.12);
+  }
+}
+@keyframes drift-b {
+  50% {
+    transform: translate3d(-7vw, -5vh, 0) scale(0.92);
+  }
+}
+@keyframes drift-c {
+  50% {
+    transform: translate3d(4vw, -8vh, 0) scale(1.08);
+  }
+}
+@keyframes ribbon {
+  from {
+    stroke-dashoffset: 1600;
+  }
+  to {
+    stroke-dashoffset: -1600;
+  }
+}
+@keyframes float-disc {
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.anim-scrim {
+  animation: fade-in 0.25s ease-out;
+}
+.anim-pop {
+  animation: pop-in 0.42s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.anim-drawer {
+  animation: drawer-in 0.4s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.anim-check {
+  animation: check-pop 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+/* Masuk bertahap: anak-anak langsung muncul berurutan. Hanya "backwards" supaya
+   setelah selesai tidak ada transform tersisa (yang akan mengganggu position: sticky/fixed). */
+.page-enter > *,
+.stagger > * {
+  animation: rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+.page-enter > :nth-child(2),
+.stagger > :nth-child(2) {
+  animation-delay: 70ms;
+}
+.page-enter > :nth-child(3),
+.stagger > :nth-child(3) {
+  animation-delay: 140ms;
+}
+.page-enter > :nth-child(4),
+.stagger > :nth-child(4) {
+  animation-delay: 210ms;
+}
+.page-enter > :nth-child(5),
+.stagger > :nth-child(5) {
+  animation-delay: 280ms;
+}
+.page-enter > :nth-child(6),
+.stagger > :nth-child(6) {
+  animation-delay: 340ms;
+}
+.page-enter > :nth-child(n + 7),
+.stagger > :nth-child(n + 7) {
+  animation-delay: 400ms;
+}
+
+/* Loader: orbit emas */
+.loader {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+.loader > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid rgba(198, 161, 91, 0.22);
+}
+.loader > span:nth-child(2) {
+  inset: 10px;
+}
+.loader > .orbit {
+  border-color: transparent;
+  animation: spin 1.4s linear infinite;
+}
+.loader > .orbit::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 9999px;
+  background: var(--gold-hi);
+  box-shadow: 0 0 12px 2px rgba(234, 208, 150, 0.8);
+}
+.loader > .orbit.inner {
+  inset: 10px;
+  animation-duration: 2.2s;
+  animation-direction: reverse;
+}
+.loader > .core {
+  inset: 22px;
+  border: none;
+  background: radial-gradient(circle at 35% 30%, #ead096, #c6a15b 60%, #8f6b28);
+  animation: pulse-core 1.8s ease-out infinite;
+}
+.shimmer-text {
+  background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 40%, var(--gold-hi) 50%, var(--muted) 60%, var(--muted) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+
+/* Latar animasi */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.backdrop .orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  will-change: transform;
+}
+.backdrop .orb-a {
+  width: 46vw;
+  height: 46vw;
+  top: -14vw;
+  right: -10vw;
+  background: var(--orb-gold);
+  animation: drift-a 26s ease-in-out infinite;
+}
+.backdrop .orb-b {
+  width: 52vw;
+  height: 52vw;
+  bottom: -22vw;
+  left: -14vw;
+  background: var(--orb-navy);
+  animation: drift-b 32s ease-in-out infinite;
+}
+.backdrop .orb-c {
+  width: 30vw;
+  height: 30vw;
+  top: 40%;
+  left: 38%;
+  background: var(--orb-steel);
+  animation: drift-c 38s ease-in-out infinite;
+}
+.backdrop .ribbon path {
+  stroke-dasharray: 260 1340;
+  animation: ribbon 14s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.backdrop .grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.backdrop .vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(3, 6, 12, 0.55));
+}
+:root[data-theme="light"] .backdrop .vignette {
+  background: radial-gradient(120% 80% at 50% 0%, transparent 50%, rgba(153, 167, 189, 0.18));
+}
+
+/* Tumpukan cakram 3D di halaman login (palet sebagai objek) */
+.discs {
+  perspective: 900px;
+}
+.disc {
+  width: 168px;
+  height: 168px;
+  border-radius: 9999px;
+  transform: rotateX(64deg) rotateZ(-18deg);
+}
+.disc-wrap {
+  animation: float-disc 6s ease-in-out infinite;
+}
+.disc-wrap:nth-child(2) {
+  animation-delay: -1.2s;
+}
+.disc-wrap:nth-child(3) {
+  animation-delay: -2.4s;
+}
+.disc-wrap:nth-child(4) {
+  animation-delay: -3.6s;
 }
 
 /* Ganti tema: lingkaran menyebar dari tombol (lihat setTheme di components/theme.tsx) */
@@ -142,9 +616,37 @@ body {
     transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1),
     opacity 0.4s ease;
 }
+
 @media (prefers-reduced-motion: reduce) {
-  .theme-anim {
+  .theme-anim,
+  .pressable,
+  [data-tilt] {
     transition: none;
+  }
+  [data-tilt] {
+    transform: none;
+  }
+  .page-enter > *,
+  .stagger > *,
+  .anim-pop,
+  .anim-drawer {
+    animation: fade-in 0.2s ease-out backwards;
+  }
+  .anim-check,
+  .backdrop *,
+  .disc-wrap,
+  .shimmer-text {
+    animation: none !important;
+  }
+  .btn-gold::after {
+    display: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --sidebar: var(--bg);
+    --glass-top: var(--surface-solid);
+    --glass-bottom: var(--surface-solid);
   }
 }
 
@@ -153,6 +655,15 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgb(var(--tint) / 0.12);
+  background: rgb(var(--tint) / 0.14);
   border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(198, 161, 91, 0.5);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::selection {
+  background: rgba(198, 161, 91, 0.35);
 }

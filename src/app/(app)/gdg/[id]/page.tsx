@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Pencil, RotateCcw, Search, UserPlus, UserRound } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Pencil, RotateCcw, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -8,7 +8,8 @@ import { FollowUpButton } from "@/components/followup";
 import { GroupModal } from "@/components/group-modal";
 import { useMe } from "@/components/role";
 import { SimpanBar } from "@/components/simpan-bar";
-import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Loading, Modal } from "@/components/ui";
+import { Av, CheckIcon, Panel, PanelHead } from "@/components/sion";
+import { Button, Empty, ErrorText, Field, Loading, Modal } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { labelGrup, type GdgGroup, type GdgSession, type Jemaat, type StatusAkademik } from "@/lib/types";
 import { addMonths, cn, firstOfMonth, fmtDate, fmtMonth, isoDate, jenjang } from "@/lib/utils";
@@ -146,299 +147,283 @@ export default function GdgDetailPage() {
   const terkunci = !!sesi?.disimpan_at;
   const bisaAbsen = !!sesi && sesi.status === "terjadwal" && !terkunci;
 
+  const nama = group.nama.replace(/^GDG\s+/i, "");
+  const tglSesi = sesi ? new Date(`${sesi.tanggal}T00:00:00`) : null;
+
   return (
     <>
-      {pengurus && (
-        <Link href="/gdg" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
-          <ArrowLeft size={15} /> Semua grup
-        </Link>
-      )}
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <section className="mb-10 flex flex-wrap items-end justify-between gap-5">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold">{group.nama}</h1>
-            <Badge color="blue">{labelGrup(group)}</Badge>
-            {!group.is_active && <Badge color="red">nonaktif</Badge>}
+          {pengurus && (
+            <Link href="/gdg" className="group inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
+              <ArrowLeft size={16} className="transition-transform duration-300 [transition-timing-function:var(--spring)] group-hover:-translate-x-1" /> Semua grup
+            </Link>
+          )}
+          <h1 className="mt-4 text-[36px] font-semibold leading-[1.04] tracking-[-0.035em] sm:text-[52px]">
+            GDG <span className="accent-serif">{nama}</span>
+          </h1>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Av nama={group.leader_name} size={36} />
+            <span className="font-bold">{group.leader_name}</span>
+            <span className="text-muted">
+              · {labelGrup(group)} · {members.length} anggota
+            </span>
+            {!group.is_active && <span className="s-chip bad">nonaktif</span>}
           </div>
-          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted">
-            <UserRound size={14} /> Leader: {group.leader_name} · {members.length} anggota aktif
-          </p>
         </div>
         {pengurus && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <Button onClick={() => setEdit(true)}>
               <Pencil size={15} /> Edit grup
             </Button>
-            <Button variant={group.is_active ? "danger" : "success"} onClick={toggleActive}>
+            <Button variant={group.is_active ? "danger" : "primary"} onClick={toggleActive}>
               {group.is_active ? "Nonaktifkan grup" : "Aktifkan grup"}
             </Button>
           </div>
         )}
-      </div>
+      </section>
 
-      <div className="grid gap-5 lg:grid-cols-5">
-        <Card className="lg:col-span-2">
-          <CardTitle
-            sub={
-              pengurus
-                ? "Default Sabtu minggu ke-2. Bisa diubah kalau hasil diskusi pindah hari."
-                : "Default Sabtu minggu ke-2. Perubahan jadwal diatur pengurus."
-            }
-            action={
-              <div className="flex items-center gap-1">
-                <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, -1))}>
-                  <ChevronLeft size={16} />
-                </button>
-                <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, 1))}>
-                  <ChevronRight size={16} />
-                </button>
+      <section>
+        <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="s-h2">
+            Pertemuan <span className="accent-serif">{fmtMonth(bulan)}</span>
+          </h2>
+          <div className="glass flex items-center gap-1 rounded-full p-1">
+            <button aria-label="Bulan sebelumnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setBulan(addMonths(bulan, -1))}>
+              <ChevronLeft size={16} />
+            </button>
+            <button aria-label="Bulan berikutnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setBulan(addMonths(bulan, 1))}>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {!sesi || !tglSesi ? (
+          <Empty>Grup nonaktif tidak punya jadwal.</Empty>
+        ) : (
+          <div className="flex flex-wrap items-stretch gap-3">
+            <div className="s-pick flex-[1_1_200px]" data-on={sesi.status !== "batal" || undefined}>
+              <div className="text-xs font-bold text-muted">{tglSesi.toLocaleDateString("id-ID", { weekday: "long" })}</div>
+              <div className={cn("mt-1.5 text-[30px] font-extrabold leading-none tracking-[-0.03em]", sesi.status === "batal" && "line-through opacity-60")}>
+                {tglSesi.getDate()} {tglSesi.toLocaleDateString("id-ID", { month: "short" })}
               </div>
-            }
-          >
-            Jadwal {fmtMonth(bulan)}
-          </CardTitle>
-          {!sesi ? (
-            <Empty>Grup nonaktif tidak punya jadwal.</Empty>
-          ) : (
-            <div className="space-y-4">
-              <div
-                className={cn(
-                  "rounded-xl border p-4",
-                  sesi.status === "batal" ? "border-danger/30 bg-danger/5" : "border-primary/30 bg-primary/5",
-                )}
-              >
-                <div className="text-xs text-muted">{sesi.status === "batal" ? "Dibatalkan" : "Tanggal GDG"}</div>
-                <div className={cn("text-lg font-semibold", sesi.status === "batal" && "line-through opacity-60")}>
-                  {fmtDate(sesi.tanggal, { weekday: "long", month: "long" })}
-                </div>
-                {sesi.tanggal !== defaultTgl && (
-                  <div className="mt-1 text-xs text-warning">Diubah dari jadwal default ({fmtDate(defaultTgl)})</div>
-                )}
-                {sesi.catatan && <div className="mt-1 text-xs text-muted">{sesi.catatan}</div>}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={sesi.status === "batal" ? "s-chip bad" : terkunci ? "s-chip" : "s-chip gold"}>
+                  {sesi.status === "batal"
+                    ? "Dibatalkan"
+                    : terkunci
+                      ? "Tersimpan"
+                      : sesi.tanggal <= isoDate(new Date())
+                        ? "Isi absensi"
+                        : "Akan datang"}
+                </span>
+                {sesi.tanggal !== defaultTgl && <span className="s-chip">Diubah dari Sabtu ke-2</span>}
               </div>
-              {pengurus && (
-                <>
-                  <Field label="Ubah tanggal">
-                    <input
-                      type="date"
-                      className="field"
-                      value={sesi.tanggal}
-                      min={bulan}
-                      onChange={(e) => e.target.value && updateSesi({ tanggal: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Catatan">
-                    <input
-                      key={sesi.id}
-                      className="field"
-                      placeholder="Mis. pindah karena ujian sekolah"
-                      defaultValue={sesi.catatan ?? ""}
-                      onBlur={(e) => updateSesi({ catatan: e.target.value || null })}
-                    />
-                  </Field>
-                  <div className="flex flex-wrap gap-2">
-                    {sesi.tanggal !== defaultTgl && (
-                      <Button size="sm" onClick={() => updateSesi({ tanggal: defaultTgl })}>
-                        <RotateCcw size={13} /> Kembalikan ke Sabtu ke-2
-                      </Button>
-                    )}
-                    {sesi.status === "batal" ? (
-                      <Button size="sm" variant="success" onClick={() => updateSesi({ status: "terjadwal" })}>
-                        Jadwalkan lagi
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="danger" onClick={() => updateSesi({ status: "batal" })}>
-                        Batalkan bulan ini
-                      </Button>
-                    )}
-                  </div>
-                </>
-              )}
+              {sesi.catatan && <div className="mt-2 text-xs text-muted">{sesi.catatan}</div>}
             </div>
-          )}
-        </Card>
 
-        <Card className="lg:col-span-3">
-          <CardTitle
-            sub={
-              sesi?.status === "batal"
+            {pengurus && (
+              <div className="glass flex flex-[999_1_420px] flex-wrap items-end gap-3 rounded-[22px] p-[18px]">
+                <Field label="Ubah tanggal" className="min-w-[160px] flex-1">
+                  <input
+                    type="date"
+                    className="field"
+                    value={sesi.tanggal}
+                    min={bulan}
+                    onChange={(e) => e.target.value && updateSesi({ tanggal: e.target.value })}
+                  />
+                </Field>
+                <Field label="Catatan" className="min-w-[200px] flex-[2]">
+                  <input
+                    key={sesi.id}
+                    className="field"
+                    placeholder="Mis. pindah karena ujian sekolah"
+                    defaultValue={sesi.catatan ?? ""}
+                    onBlur={(e) => updateSesi({ catatan: e.target.value || null })}
+                  />
+                </Field>
+                <div className="flex flex-wrap gap-2">
+                  {sesi.tanggal !== defaultTgl && (
+                    <Button size="sm" onClick={() => updateSesi({ tanggal: defaultTgl })}>
+                      <RotateCcw size={13} /> Sabtu ke-2
+                    </Button>
+                  )}
+                  {sesi.status === "batal" ? (
+                    <Button size="sm" variant="primary" onClick={() => updateSesi({ status: "terjadwal" })}>
+                      Jadwalkan lagi
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="danger" onClick={() => updateSesi({ status: "batal" })}>
+                      Batalkan bulan ini
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      <ErrorText>{error}</ErrorText>
+
+      <section className="glass mt-6 overflow-hidden rounded-[28px]">
+        <div className="flex flex-wrap items-center justify-between gap-4 px-6 pb-1 pt-[22px]">
+          <div>
+            <div className="font-bold">Anggota{tglSesi && ` · ${fmtDate(sesi!.tanggal, { year: undefined })}`}</div>
+            <div className="s-sub">
+              {sesi?.status === "batal"
                 ? "GDG bulan ini batal, tidak ada absensi."
                 : terkunci
-                  ? "Sudah disimpan."
+                  ? `${hadir.size} hadir · sudah disimpan`
                   : sesi && sesi.tanggal <= isoDate(new Date())
-                    ? "Centang anggota yang hadir, lalu klik Simpan."
-                    : "Bisa dicentang saat hari H."
-            }
-            action={sesi && <Badge color="green">{hadir.size} hadir</Badge>}
-          >
-            Absensi GDG
-          </CardTitle>
-          {sesi && sesi.status === "terjadwal" && terkunci && (
-            <SimpanBar
-              disimpanAt={sesi.disimpan_at}
-              disimpanNama={sesi.disimpan_nama}
-              jumlah={hadir.size}
-              busy={busy}
-              onSimpan={() => simpan(true)}
-              onBuka={() => simpan(false)}
-            />
-          )}
-          <ErrorText>{error}</ErrorText>
-          {members.length === 0 ? (
+                    ? `${hadir.size} dari ${members.length} hadir · centang lalu simpan`
+                    : "Bisa dicentang saat hari H."}
+            </div>
+          </div>
+          {pengurus && <span className="text-xs text-muted">Pindah grup = otomatis jadi manual</span>}
+        </div>
+        {members.length === 0 ? (
+          <div className="p-6">
             <Empty>Belum ada anggota.</Empty>
-          ) : (
-            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-              {members.map((m) => {
-                const on = hadir.has(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    disabled={!bisaAbsen}
-                    onClick={() => toggle(m.id)}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition",
-                      on ? "border-success/40 bg-success/10" : "border-line bg-surface hover:border-line-strong",
-                      !bisaAbsen && "cursor-default",
-                      !bisaAbsen && !on && "opacity-50",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-5 w-5 place-items-center rounded-md border",
-                        on ? "border-success bg-success text-[#052e1f]" : "border-line-strong",
-                      )}
-                    >
-                      {on && <Check size={13} strokeWidth={3} />}
-                    </span>
-                    {m.nama}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {sesi && sesi.status === "terjadwal" && (tamu.length > 0 || bisaAbsen) && (
-            <div className="mt-5">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Dari GDG lain{tamu.length > 0 && ` · ${tamu.length}`}
-                </div>
-                {bisaAbsen && (
-                  <Button size="sm" onClick={() => setTambahTamu(true)}>
-                    <UserPlus size={13} /> Tambah dari GDG lain
-                  </Button>
-                )}
-              </div>
-              {tamu.length === 0 ? (
-                <p className="text-xs text-faint">
-                  Kalau GDG bulan ini digabung dengan grup lain, tambahkan anggota grup itu di sini.
-                </p>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {tamu.map((t) => (
-                    <button
-                      key={t.id}
-                      disabled={!bisaAbsen}
-                      onClick={() => toggleTamu(t, false)}
-                      title={bisaAbsen ? "Klik untuk membatalkan" : undefined}
-                      className={cn(
-                        "flex items-center gap-3 rounded-xl border border-success/40 bg-success/10 px-3 py-2.5 text-left text-sm",
-                        !bisaAbsen && "cursor-default",
-                      )}
-                    >
-                      <span className="grid h-5 w-5 place-items-center rounded-md border border-success bg-success text-[#052e1f]">
-                        <Check size={13} strokeWidth={3} />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate">{t.nama}</span>
-                      <span className="shrink-0 text-[11px] text-muted">{t.grup_nama ?? "tanpa grup"}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {sesi && bisaAbsen && (
-            <SimpanBar
-              disimpanAt={null}
-              disimpanNama={null}
-              jumlah={hadir.size}
-              busy={busy}
-              onSimpan={() => simpan(true)}
-              onBuka={() => simpan(false)}
-            />
-          )}
-        </Card>
-      </div>
-
-      <Card className="mt-5 p-0">
-        <div className="p-5 pb-0">
-          <CardTitle
-            sub={
-              pengurus
-                ? "Dihitung dari sesi GDG grup ini yang sudah lewat. Pindah grup = otomatis jadi manual."
-                : "Dihitung dari sesi GDG grup ini yang sudah lewat."
-            }
-          >
-            Anggota & kehadiran
-          </CardTitle>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-muted">
-                <th className="px-5 py-3 font-medium">Nama</th>
-                <th className="px-5 py-3 font-medium">Jenjang</th>
-                <th className="px-5 py-3 font-medium">Kehadiran</th>
-                <th className="px-5 py-3 font-medium">Absen beruntun</th>
-                {pengurus && <th className="px-5 py-3 font-medium">Pindah ke</th>}
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => {
-                const s = stats[m.id];
-                const pct = s && s.total_sesi ? Math.round((s.total_hadir / s.total_sesi) * 100) : null;
-                return (
-                  <tr key={m.id} className="border-t border-line">
-                    <td className="px-5 py-3 font-medium">
-                      {m.nama}
-                      {m.gdg_manual && <span className="ml-2 text-xs text-faint">manual</span>}
-                    </td>
-                    <td className="px-5 py-3 text-muted">{jenjang(m)}</td>
-                    <td className="px-5 py-3 text-muted">
-                      {pct == null ? "-" : `${pct}% (${s!.total_hadir}/${s!.total_sesi})`}
-                    </td>
-                    <td className="px-5 py-3">
-                      {s && s.absen_beruntun >= 2 ? (
-                        <Badge color={s.absen_beruntun >= 3 ? "red" : "yellow"}>{s.absen_beruntun}× berturut</Badge>
-                      ) : (
-                        <span className="text-faint">-</span>
-                      )}
-                    </td>
-                    {pengurus && (
-                      <td className="px-5 py-3">
-                        <select
-                          className="field w-auto py-1.5 text-xs"
-                          value={group.id}
-                          onChange={(e) => pindah(m.id, e.target.value)}
-                        >
-                          {groups.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.nama} ({labelGrup(g)})
-                            </option>
-                          ))}
-                        </select>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="s-tbl">
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Jenjang</th>
+                  <th>Kehadiran</th>
+                  <th>Absen beruntun</th>
+                  <th>Hadir</th>
+                  {pengurus && <th>Pindah ke</th>}
+                  <th>
+                    <span className="sr-only">Aksi</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m, i) => {
+                  const s = stats[m.id];
+                  const pct = s && s.total_sesi ? Math.round((s.total_hadir / s.total_sesi) * 100) : null;
+                  const on = hadir.has(m.id);
+                  return (
+                    <tr key={m.id}>
+                      <td>
+                        <div className="flex items-center gap-3">
+                          <Av nama={m.nama} i={i} size={38} />
+                          <div>
+                            <div className="whitespace-nowrap font-bold">{m.nama}</div>
+                            {m.gdg_manual && <div className="text-xs text-muted">manual</div>}
+                          </div>
+                        </div>
                       </td>
-                    )}
-                    <td className="px-5 py-3 text-right">
-                      <FollowUpButton jemaat={m} label="WA" />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                      <td>
+                        <span className="s-chip">{jenjang(m)}</span>
+                      </td>
+                      <td>
+                        {pct == null ? (
+                          <span className="text-muted">—</span>
+                        ) : (
+                          <div className="flex min-w-[140px] items-center gap-2.5">
+                            <span className="s-track flex-1">
+                              <i style={{ width: `${Math.max(3, pct)}%`, animationDelay: `${0.2 + i * 0.04}s` }} />
+                            </span>
+                            <span className="text-xs font-bold tabular-nums">
+                              {s!.total_hadir}/{s!.total_sesi}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {s && s.absen_beruntun >= 2 ? (
+                          <span className={s.absen_beruntun >= 3 ? "s-chip bad" : "s-chip gold"}>{s.absen_beruntun}×</span>
+                        ) : (
+                          <span className="text-muted">—</span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="s-chk"
+                          disabled={!bisaAbsen}
+                          onClick={() => toggle(m.id)}
+                          aria-pressed={on}
+                          aria-label={`Hadir ${m.nama}`}
+                          style={{ opacity: !bisaAbsen && !on ? 0.45 : 1 }}
+                        >
+                          <CheckIcon />
+                        </button>
+                      </td>
+                      {pengurus && (
+                        <td>
+                          <select className="field w-auto !rounded-full py-2 text-xs" value={group.id} onChange={(e) => pindah(m.id, e.target.value)}>
+                            {groups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.nama} ({labelGrup(g)})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      )}
+                      <td className="text-right">
+                        <FollowUpButton jemaat={m} label="WA" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {sesi && sesi.status === "terjadwal" && (tamu.length > 0 || bisaAbsen) && (
+        <Panel className="mt-6">
+          <PanelHead
+            title="Dari GDG"
+            accent="lain"
+            sub="Kalau GDG bulan ini digabung dengan grup lain, tambahkan anggota grup itu di sini."
+            action={
+              bisaAbsen && (
+                <Button size="sm" onClick={() => setTambahTamu(true)}>
+                  <UserPlus size={14} /> Tambah dari GDG lain
+                </Button>
+              )
+            }
+          />
+          {tamu.length > 0 && (
+            <div className="flex flex-wrap gap-2.5">
+              {tamu.map((t, i) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  disabled={!bisaAbsen}
+                  onClick={() => toggleTamu(t, false)}
+                  title={bisaAbsen ? "Klik untuk membatalkan" : undefined}
+                  aria-pressed
+                  className="s-namepill"
+                >
+                  <Av nama={t.nama} i={i} />
+                  {t.nama}
+                  <span className="text-xs opacity-70">{t.grup_nama ?? "tanpa grup"}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </Panel>
+      )}
+
+      {sesi && sesi.status === "terjadwal" && (bisaAbsen || terkunci) && (
+        <SimpanBar
+          disimpanAt={sesi.disimpan_at}
+          disimpanNama={sesi.disimpan_nama}
+          jumlah={hadir.size}
+          busy={busy}
+          onSimpan={() => simpan(true)}
+          onBuka={() => simpan(false)}
+        />
+      )}
 
       <TambahTamuModal
         open={tambahTamu}
@@ -451,6 +436,7 @@ export default function GdgDetailPage() {
     </>
   );
 }
+
 
 /** Pilih jemaat dari GDG lain yang ikut GDG ini hari ini */
 function TambahTamuModal({
@@ -493,12 +479,13 @@ function TambahTamuModal({
           Untuk GDG yang digabung dengan grup lain. Yang dipilih langsung tercatat hadir di GDG ini; keanggotaan
           grupnya sendiri tidak berubah.
         </p>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-            <input className="field pl-9" placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-          </div>
-          <select className="field w-auto" value={grup} onChange={(e) => setGrup(e.target.value)}>
+        <div className="flex flex-wrap gap-2">
+          <label className="s-search !h-12">
+            <Search size={16} className="text-muted" />
+            <span className="sr-only">Cari nama</span>
+            <input placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          </label>
+          <select className="field w-auto !rounded-full" value={grup} onChange={(e) => setGrup(e.target.value)}>
             <option value="">Semua grup</option>
             {namaGrup.map((g) => (
               <option key={g}>{g}</option>
@@ -511,30 +498,21 @@ function TambahTamuModal({
           ) : tampil.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted">Tidak ada jemaat yang cocok.</p>
           ) : (
-            tampil.map((t) => {
+            tampil.map((t, i) => {
               const on = sudah.has(t.id);
               return (
-                <button
-                  key={t.id}
-                  onClick={() => onToggle(t, !on)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left text-sm transition",
-                    on ? "border-success/40 bg-success/10" : "border-line bg-surface hover:border-line-strong",
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "grid h-5 w-5 shrink-0 place-items-center rounded-md border",
-                      on ? "border-success bg-success text-[#052e1f]" : "border-line-strong",
-                    )}
-                  >
-                    {on && <Check size={13} strokeWidth={3} />}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">{t.nama}</span>
-                  <span className="shrink-0 text-[11px] text-muted">
-                    {t.status_akademik} · {t.grup_nama ?? "tanpa grup"}
-                  </span>
-                </button>
+                <div key={t.id} className="s-prow" data-on={on || undefined}>
+                  <Av nama={t.nama} i={i} size={38} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-bold">{t.nama}</div>
+                    <div className="text-xs text-muted">
+                      {t.status_akademik} · {t.grup_nama ?? "tanpa grup"}
+                    </div>
+                  </div>
+                  <button type="button" className="s-chk" onClick={() => onToggle(t, !on)} aria-pressed={on} aria-label={`Hadir ${t.nama}`}>
+                    <CheckIcon />
+                  </button>
+                </div>
               );
             })
           )}

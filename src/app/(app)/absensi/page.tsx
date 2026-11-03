@@ -1,12 +1,13 @@
 "use client";
 
-import { Check, ChevronLeft, ChevronRight, FileBarChart, Minus, Plus, Search, UserPlus } from "lucide-react";
+import { CalendarOff, ChevronLeft, ChevronRight, Church, FileBarChart, Minus, Plus, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMe } from "@/components/role";
+import { Av, CheckIcon, Panel, Seg } from "@/components/sion";
 import { SimpanBar } from "@/components/simpan-bar";
 import { TambahCepat } from "@/components/tambah-cepat";
-import { Badge, Button, Card, ErrorText, Field, Loading, PageHeader } from "@/components/ui";
+import { Button, ErrorText, Loading, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_AKADEMIK, type IbadahSession, type StatusAkademik } from "@/lib/types";
 import { cn, fmtDate, isoDate, mingguIni, parseDate } from "@/lib/utils";
@@ -33,6 +34,7 @@ export default function AbsensiPage() {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [q, setQ] = useState("");
   const [jen, setJen] = useState("");
+  const [lihat, setLihat] = useState<"semua" | "belum" | "hadir">("semua");
   const [tambah, setTambah] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -105,205 +107,252 @@ export default function AbsensiPage() {
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return (rows ?? []).filter((r) => (!jen || r.status_akademik === jen) && (!s || r.nama.toLowerCase().includes(s)));
-  }, [rows, q, jen]);
+    return (rows ?? []).filter(
+      (r) =>
+        (!jen || r.status_akademik === jen) &&
+        (!s || r.nama.toLowerCase().includes(s)) &&
+        (lihat === "semua" || (lihat === "hadir") === r.hadir),
+    );
+  }, [rows, q, jen, lihat]);
+  const total = rows?.length ?? 0;
   const jumlahHadir = (rows ?? []).filter((r) => r.hadir).length;
   const isFuture = tanggal > isoDate(new Date());
+  const terkunci = !!sesi?.disimpan_at;
+  const C = 2 * Math.PI * 70;
 
   return (
     <>
       <PageHeader
-        title="Absensi Ibadah"
-        sub="Centang jemaat yang hadir, lalu klik Simpan absensi."
+        eyebrow="Absensi Ibadah"
+        title={`Minggu, ${fmtDate(tanggal, { month: "long", year: undefined })}`}
+        sub={terkunci ? "Absensi minggu ini sudah disimpan." : "Ketuk nama untuk menandai hadir. Centangan tersimpan otomatis sebagai draf."}
         action={
-          pengurus && (
-            <Link
-              href="/absensi/laporan"
-              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm font-medium hover:bg-tint/10"
-            >
-              <FileBarChart size={16} /> Laporan absensi
-            </Link>
-          )
+          <>
+            <div className="glass flex items-center gap-1 rounded-full p-[5px]">
+              <button aria-label="Minggu sebelumnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setTanggal(geser(tanggal, -1))}>
+                <ChevronLeft size={17} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setTanggal(mingguIni())}
+                className="min-w-[130px] px-2 text-center text-sm font-bold"
+                title="Kembali ke minggu ini"
+              >
+                {tanggal === mingguIni() ? "Minggu ini" : tanggal < mingguIni() ? "Minggu lalu" : "Minggu depan"}
+              </button>
+              <button aria-label="Minggu berikutnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setTanggal(geser(tanggal, 1))}>
+                <ChevronRight size={17} />
+              </button>
+            </div>
+            {pengurus && (
+              <Link href="/absensi/laporan" className="btn-ghost pressable inline-flex min-h-[46px] items-center gap-2 rounded-full px-5 text-sm font-semibold backdrop-blur-xl">
+                <FileBarChart size={16} /> Laporan
+              </Link>
+            )}
+          </>
         }
       />
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="glass flex items-center gap-1 rounded-xl p-1">
-          <button className="rounded-lg p-2 hover:bg-tint/10" onClick={() => setTanggal(geser(tanggal, -1))}>
-            <ChevronLeft size={18} />
-          </button>
-          <div className="min-w-[180px] px-2 text-center text-sm font-medium">
-            Minggu, {fmtDate(tanggal, { month: "long" })}
-          </div>
-          <button className="rounded-lg p-2 hover:bg-tint/10" onClick={() => setTanggal(geser(tanggal, 1))}>
-            <ChevronRight size={18} />
-          </button>
+      {isFuture && (
+        <div className="mb-5">
+          <span className="s-chip gold">Tanggal belum lewat</span>
         </div>
-        {tanggal !== mingguIni() && (
-          <Button size="sm" onClick={() => setTanggal(mingguIni())}>
-            Minggu ini
-          </Button>
-        )}
-        {isFuture && <Badge color="yellow">Tanggal belum lewat</Badge>}
-      </div>
-
-      {pengurus && sesi && (
-        <Card className="mb-5">
-          <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <div className="mb-1.5 text-xs font-medium text-muted">Status ibadah minggu ini (hanya pengurus)</div>
-              <div className="flex flex-wrap gap-2">
-                {STATUS_SESI.map((s) => (
-                  <button
-                    key={s.v}
-                    onClick={() => setStatus(s.v)}
-                    className={cn(
-                      "rounded-xl border px-3 py-2 text-left text-sm transition",
-                      sesi.status === s.v
-                        ? "border-primary bg-primary/15 text-ink"
-                        : "border-line bg-surface text-muted hover:text-ink",
-                    )}
-                  >
-                    <div className="font-medium">{s.label}</div>
-                    <div className="text-[11px] opacity-70">{s.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Field label="Catatan" className="min-w-[220px] flex-1">
-              <input
-                key={sesi.id}
-                className="field"
-                placeholder="Mis. gabung karena Paskah"
-                defaultValue={sesi.catatan ?? ""}
-                onBlur={(e) => setCatatan(e.target.value)}
-              />
-            </Field>
-          </div>
-        </Card>
       )}
 
       <ErrorText>{error}</ErrorText>
 
       {!sesi || !rows ? (
         <Loading />
-      ) : sesi.status !== "sion" ? (
-        <Card className="py-14 text-center">
-          <div className="text-4xl">{sesi.status === "gabung" ? "⛪" : "🌴"}</div>
-          <p className="mt-3 text-lg font-semibold">
-            {sesi.status === "gabung" ? "Minggu ini gabung ibadah umum" : "Minggu ini libur"}
-          </p>
-          <p className="mt-1 text-sm text-muted">
-            Tidak ada absensi Sion. Minggu ini tidak dihitung di peringatan &quot;lama tidak datang&quot;.
-          </p>
-          {sesi.catatan && <p className="mt-2 text-sm text-muted">Catatan: {sesi.catatan}</p>}
-        </Card>
       ) : (
-        <>
-          {sesi.disimpan_at && (
-            <SimpanBar
-              disimpanAt={sesi.disimpan_at}
-              disimpanNama={sesi.disimpan_nama}
-              jumlah={jumlahHadir}
-              busy={busy}
-              onSimpan={() => simpan(true)}
-              onBuka={() => simpan(false)}
-            />
-          )}
-          <div className="mb-4 grid gap-3 sm:grid-cols-3">
-            <Card className="p-4">
-              <div className="text-xs text-muted">Jemaat hadir</div>
-              <div className="mt-1 text-3xl font-bold">
-                {jumlahHadir}
-                <span className="text-base font-normal text-muted"> / {rows.length}</span>
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-xs text-muted">Tamu / pengunjung (tanpa data)</div>
-              <div className="mt-1 flex items-center gap-3">
-                <Button size="sm" disabled={!!sesi.disimpan_at} onClick={() => setTamu(sesi.jumlah_tamu - 1)}>
-                  <Minus size={14} />
-                </Button>
-                <span className="w-10 text-center text-3xl font-bold">{sesi.jumlah_tamu}</span>
-                <Button size="sm" disabled={!!sesi.disimpan_at} onClick={() => setTamu(sesi.jumlah_tamu + 1)}>
-                  <Plus size={14} />
-                </Button>
-              </div>
-            </Card>
-            <Card className="flex items-center p-4">
-              <Button variant="primary" className="w-full" disabled={!!sesi.disimpan_at} onClick={() => setTambah(true)}>
-                <UserPlus size={16} /> Jemaat baru datang
-              </Button>
-            </Card>
-          </div>
-
-          <Card className="p-0">
-            <div className="flex flex-wrap gap-3 border-b border-line p-4">
-              <div className="relative min-w-[200px] flex-1">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-                <input
-                  className="field pl-9"
-                  placeholder="Ketik nama…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <select className="field w-auto" value={jen} onChange={(e) => setJen(e.target.value)}>
-                <option value="">Semua</option>
-                {STATUS_AKADEMIK.map((s) => (
-                  <option key={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-2 p-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => toggle(r)}
-                  disabled={!!sesi.disimpan_at}
-                  className={cn(
-                    "flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition active:scale-[0.98]",
-                    r.hadir
-                      ? "border-success/40 bg-success/10"
-                      : "border-line bg-surface hover:border-line-strong",
-                    sesi.disimpan_at && "cursor-default active:scale-100",
-                    sesi.disimpan_at && !r.hadir && "opacity-50",
+        <div className="flex flex-wrap items-start gap-6">
+          <section className="min-w-0 flex-[999_1_560px]">
+            {sesi.status !== "sion" ? (
+              <Panel className="py-16 text-center">
+                <span className="s-ico mx-auto h-16 w-16 rounded-[20px]">
+                  {sesi.status === "gabung" ? <Church size={28} /> : <CalendarOff size={28} />}
+                </span>
+                <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+                  {sesi.status === "gabung" ? (
+                    <>
+                      Minggu ini gabung <span className="accent-serif">ibadah umum</span>
+                    </>
+                  ) : (
+                    <>
+                      Minggu ini <span className="accent-serif">libur</span>
+                    </>
                   )}
-                >
-                  <span
-                    className={cn(
-                      "grid h-6 w-6 shrink-0 place-items-center rounded-md border",
-                      r.hadir ? "border-success bg-success text-[#052e1f]" : "border-line-strong",
-                    )}
-                  >
-                    {r.hadir && <Check size={15} strokeWidth={3} />}
-                  </span>
-                  <span className="flex-1 truncate text-sm font-medium">{r.nama}</span>
-                  <span className="text-[11px] text-faint">{r.status_akademik}</span>
-                </button>
-              ))}
-              {filtered.length === 0 && (
-                <p className="col-span-full py-6 text-center text-sm text-muted">
-                  Nama tidak ditemukan.{" "}
-                  <button className="text-primary hover:underline" onClick={() => setTambah(true)}>
-                    Tambah sebagai jemaat baru
-                  </button>
+                </h2>
+                <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+                  Tidak ada absensi Sion. Minggu ini tidak dihitung di peringatan &quot;lama tidak datang&quot;.
                 </p>
-              )}
-            </div>
-          </Card>
-          {!sesi.disimpan_at && (
-            <SimpanBar
-              disimpanAt={null}
-              disimpanNama={null}
-              jumlah={jumlahHadir}
-              busy={busy}
-              onSimpan={() => simpan(true)}
-              onBuka={() => simpan(false)}
-            />
-          )}
-        </>
+                {sesi.catatan && <p className="mt-2 text-sm text-muted">Catatan: {sesi.catatan}</p>}
+              </Panel>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="s-search">
+                    <Search size={18} className="text-muted" />
+                    <span className="sr-only">Cari nama</span>
+                    <input placeholder="Ketik nama…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+                  </label>
+                  <Seg
+                    label="Filter kehadiran"
+                    value={lihat}
+                    onChange={setLihat}
+                    options={[
+                      { value: "semua", label: "Semua", count: total },
+                      { value: "belum", label: "Belum hadir", count: total - jumlahHadir },
+                      { value: "hadir", label: "Hadir", count: jumlahHadir },
+                    ]}
+                  />
+                </div>
+                <Seg
+                  small
+                  className="mt-3"
+                  label="Filter jenjang"
+                  value={jen}
+                  onChange={setJen}
+                  options={[{ value: "", label: "Semua jenjang" }, ...STATUS_AKADEMIK.map((s) => ({ value: s as string, label: s }))]}
+                />
+
+                <Panel className="mt-4 !p-3.5">
+                  <div className="grid gap-1.5 sm:grid-cols-2">
+                    {filtered.map((r, i) => (
+                      <div key={r.id} className="s-prow" data-on={r.hadir || undefined} style={{ opacity: terkunci && !r.hadir ? 0.5 : 1 }}>
+                        <Av nama={r.nama} i={i} size={40} />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-bold">{r.nama}</div>
+                          <div className="text-xs text-muted">{r.status_akademik}</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="s-chk"
+                          onClick={() => toggle(r)}
+                          disabled={terkunci}
+                          aria-pressed={r.hadir}
+                          aria-label={`${r.hadir ? "Batalkan hadir" : "Tandai hadir"} ${r.nama}`}
+                        >
+                          <CheckIcon />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {filtered.length === 0 && (
+                    <p className="py-10 text-center text-sm text-muted">
+                      Nama tidak ditemukan.{" "}
+                      <button className="s-more" onClick={() => setTambah(true)}>
+                        Tambah sebagai jemaat baru
+                      </button>
+                    </p>
+                  )}
+                </Panel>
+
+                <SimpanBar
+                  disimpanAt={sesi.disimpan_at}
+                  disimpanNama={sesi.disimpan_nama}
+                  jumlah={jumlahHadir}
+                  tamu={sesi.jumlah_tamu}
+                  busy={busy}
+                  onSimpan={() => simpan(true)}
+                  onBuka={() => simpan(false)}
+                />
+              </>
+            )}
+          </section>
+
+          <aside className="flex min-w-0 flex-[1_1_260px] flex-col gap-[18px] lg:max-w-[300px]">
+            {sesi.status === "sion" && (
+              <>
+                <Panel className="text-center">
+                  <svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label={`${jumlahHadir} dari ${total} jemaat hadir`} className="mx-auto block">
+                    <defs>
+                      <linearGradient id="ring-absen" x1="0" x2="1" y1="0" y2="1">
+                        <stop offset="0" stopColor="#F3DDA8" />
+                        <stop offset="1" stopColor="#C6A15B" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="90" cy="90" r="70" fill="none" stroke="var(--surface-2)" strokeWidth="12" />
+                    <circle
+                      cx="90"
+                      cy="90"
+                      r="70"
+                      fill="none"
+                      stroke="url(#ring-absen)"
+                      strokeWidth="12"
+                      strokeLinecap="round"
+                      strokeDasharray={`${total ? (jumlahHadir / total) * C : 0} ${C}`}
+                      transform="rotate(-90 90 90)"
+                      style={{ transition: "stroke-dasharray .8s var(--spring)", filter: "drop-shadow(0 0 8px rgba(227,198,138,0.5))" }}
+                    />
+                    <text x="90" y="92" textAnchor="middle" fontWeight="800" fontSize="40" fill="var(--text)">
+                      {jumlahHadir}
+                    </text>
+                    <text x="90" y="116" textAnchor="middle" fontWeight="600" fontSize="12" fill="var(--muted)">
+                      dari {total} jemaat
+                    </text>
+                  </svg>
+                </Panel>
+
+                <Panel className="!p-6">
+                  <div className="font-bold">Tamu / pengunjung</div>
+                  <div className="s-sub">Yang belum punya data jemaat</div>
+                  <div className="glass mt-4 flex items-center justify-between rounded-full p-[5px]">
+                    <button
+                      type="button"
+                      aria-label="Kurangi tamu"
+                      disabled={terkunci}
+                      onClick={() => setTamu(sesi.jumlah_tamu - 1)}
+                      className="pressable grid h-11 w-11 place-items-center rounded-full bg-surface-2 hover:bg-gold/20 disabled:opacity-40"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="text-[22px] font-extrabold tabular-nums" aria-live="polite">
+                      {sesi.jumlah_tamu}
+                    </span>
+                    <button
+                      type="button"
+                      aria-label="Tambah tamu"
+                      disabled={terkunci}
+                      onClick={() => setTamu(sesi.jumlah_tamu + 1)}
+                      className="pressable grid h-11 w-11 place-items-center rounded-full bg-surface-2 hover:bg-gold/20 disabled:opacity-40"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <Button variant="primary" className="mt-4 w-full" disabled={terkunci} onClick={() => setTambah(true)}>
+                    <UserPlus size={16} /> Jemaat baru datang
+                  </Button>
+                </Panel>
+              </>
+            )}
+
+            {pengurus && (
+              <Panel className="!p-6">
+                <div className="font-bold">Status ibadah</div>
+                <div className="s-sub">Hanya pengurus</div>
+                <div className="mt-4 flex flex-col gap-2">
+                  {STATUS_SESI.map((s) => (
+                    <button key={s.v} type="button" className={cn("s-pick !p-3.5")} data-on={sesi.status === s.v || undefined} onClick={() => setStatus(s.v)}>
+                      <div className="text-sm font-bold">{s.label}</div>
+                      <div className="text-xs text-muted">{s.desc}</div>
+                    </button>
+                  ))}
+                </div>
+                <label className="mt-4 block">
+                  <span className="mb-2 block text-[13px] font-bold text-muted">Catatan</span>
+                  <textarea
+                    key={sesi.id}
+                    rows={3}
+                    className="field rounded-2xl"
+                    placeholder="Mis. gabung karena Paskah"
+                    defaultValue={sesi.catatan ?? ""}
+                    onBlur={(e) => setCatatan(e.target.value)}
+                  />
+                </label>
+              </Panel>
+            )}
+          </aside>
+        </div>
       )}
 
       <TambahCepat

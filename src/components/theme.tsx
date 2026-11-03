@@ -92,6 +92,31 @@ function SunMoon({ dark }: { dark: boolean }) {
   );
 }
 
+/** Sakelar kapsul: matahari emas meluncur & berputar jadi bulan sabit, bintang muncul di mode gelap */
+export function ThemeSwitch({ className }: { className?: string }) {
+  const dark = useTheme() === "dark";
+  return (
+    <button
+      type="button"
+      onClick={(e) => setTheme(dark ? "light" : "dark", { x: e.clientX, y: e.clientY })}
+      data-dark={dark || undefined}
+      aria-label={dark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
+      title={dark ? "Mode terang" : "Mode gelap"}
+      className={["tg", className].filter(Boolean).join(" ")}
+    >
+      <span className="star" style={{ left: 14, top: 9 }} />
+      <span className="star" style={{ left: 22, top: 21, width: 2, height: 2 }} />
+      <span className="star" style={{ left: 9, top: 20, width: 2, height: 2 }} />
+      <span className="knob">
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <span key={a} className="ray" style={{ transform: `rotate(${a}deg) translateY(-17px)` }} />
+        ))}
+        <span className="bite" />
+      </span>
+    </button>
+  );
+}
+
 export function ThemeToggle({ className }: { className?: string }) {
   const theme = useTheme();
   const dark = theme === "dark";
@@ -107,7 +132,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         className ?? "rounded-lg border border-line p-2 text-muted transition hover:bg-tint/10 hover:text-ink"
       }
     >
-      <span className={dark ? "text-[#fbbf24]" : "text-[#6366f1]"}>
+      <span className="text-current">
         <SunMoon dark={dark} />
       </span>
     </button>

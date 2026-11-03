@@ -79,13 +79,13 @@ export function JemaatDetail({
           </div>
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-line bg-surface p-3">
+              <div className="rounded-xl bg-tint/[0.035] p-3">
                 <div className="text-xs text-muted">Hadir ibadah</div>
-                <div className="text-2xl font-bold">{hadir.ibadah}×</div>
+                <div className="text-2xl font-semibold tracking-tight tabular-nums">{hadir.ibadah}×</div>
               </div>
-              <div className="rounded-xl border border-line bg-surface p-3">
+              <div className="rounded-xl bg-tint/[0.035] p-3">
                 <div className="text-xs text-muted">Hadir GDG</div>
-                <div className="text-2xl font-bold">{hadir.gdg}×</div>
+                <div className="text-2xl font-semibold tracking-tight tabular-nums">{hadir.gdg}×</div>
               </div>
             </div>
             <div>
@@ -124,7 +124,7 @@ export function JemaatDetail({
               {fu.length ? (
                 <ul className="space-y-1.5 text-sm">
                   {fu.map((f) => (
-                    <li key={f.id} className="rounded-lg bg-surface px-3 py-2">
+                    <li key={f.id} className="rounded-lg bg-tint/[0.035] px-3 py-2">
                       <span className="text-muted">{fmtDate(f.created_at)} · {f.oleh_nama}</span>
                       {f.hasil && <div>{f.hasil}</div>}
                     </li>

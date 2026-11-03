@@ -4,7 +4,9 @@ import { ArrowLeft, CheckCircle2, Download, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMe } from "@/components/role";
-import { Badge, Button, Card, CardTitle, Empty, Field, Loading, PageHeader, Stat } from "@/components/ui";
+import { CountUp } from "@/components/effects";
+import { Av } from "@/components/sion";
+import { Button, Empty, Loading, PageHeader } from "@/components/ui";
 import { fetchAll } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import type { IbadahSession, Jemaat } from "@/lib/types";
@@ -124,90 +126,115 @@ export default function LaporanPage() {
 
   return (
     <>
-      <Link href="/absensi" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink">
-        <ArrowLeft size={15} /> Absensi
+      <Link href="/absensi" className="group mb-2 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
+        <ArrowLeft size={16} className="transition-transform duration-300 [transition-timing-function:var(--spring)] group-hover:-translate-x-1" /> Absensi
       </Link>
       <PageHeader
-        title="Laporan Absensi Ibadah"
+        eyebrow="Laporan Absensi"
+        title="Rekap per minggu"
         sub="Rekap per minggu dan per jemaat. Export ke CSV untuk dibuka di Excel / Google Sheets."
         action={
-          <Button variant="primary" onClick={exportCsv} disabled={!sesi || !r.sion.length}>
+          <Button variant="primary" onClick={exportCsv} disabled={!sesi || !r.sion.length} className="min-h-[46px] px-6">
             <Download size={16} /> Export CSV
           </Button>
         }
       />
 
-      <Card className="mb-5">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-wrap gap-1.5">
-            {PRESET.map((p) => (
-              <Button key={p.k} size="sm" onClick={() => setDari(dariPreset(p.k))}>
-                {p.label}
-              </Button>
-            ))}
-          </div>
-          <Field label="Dari">
-            <input type="date" className="field w-auto" value={dari} onChange={(e) => setDari(e.target.value)} />
-          </Field>
-          <Field label="Sampai">
-            <input type="date" className="field w-auto" value={sampai} onChange={(e) => setSampai(e.target.value)} />
-          </Field>
+      <section className="mb-6 flex flex-wrap items-center gap-3">
+        <div className="s-seg" role="group" aria-label="Periode cepat">
+          {PRESET.map((p) => (
+            <button key={p.k} type="button" aria-pressed={dari === dariPreset(p.k)} onClick={() => setDari(dariPreset(p.k))}>
+              {p.label}
+            </button>
+          ))}
         </div>
-      </Card>
+        <div className="glass flex flex-wrap items-center gap-2 rounded-full py-1.5 pl-5 pr-2">
+          <label className="flex items-center gap-2 text-[13px] font-semibold text-muted">
+            Dari
+            <input type="date" className="bg-transparent text-sm font-semibold text-ink outline-none" value={dari} onChange={(e) => setDari(e.target.value)} />
+          </label>
+          <span className="text-muted">→</span>
+          <label className="flex items-center gap-2 text-[13px] font-semibold text-muted">
+            Sampai
+            <input type="date" className="bg-transparent text-sm font-semibold text-ink outline-none" value={sampai} onChange={(e) => setSampai(e.target.value)} />
+          </label>
+        </div>
+      </section>
 
       {!sesi ? (
         <Loading />
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Stat label="Ibadah Sion" value={r.sion.length} sub={`${sesi.length - r.sion.length} minggu gabung/libur`} />
-            <Stat label="Rata-rata hadir" value={r.rata} sub="jemaat terdata per ibadah" />
-            <Stat label="Total tamu" value={r.tamu} />
-            <Stat
-              label="Belum disimpan"
-              value={r.belum}
-              sub={r.belum ? "minggu yang absensinya belum dikunci" : "semua sudah tersimpan"}
-            />
-          </div>
+          <section className="glass s-stats mb-6" aria-label="Ringkasan">
+            <div className="s-stat">
+              <div className="l">Ibadah Sion</div>
+              <div className="n">
+                <CountUp value={r.sion.length} />
+              </div>
+              <div className="s">{sesi.length - r.sion.length} minggu gabung/libur</div>
+            </div>
+            <div className="s-stat">
+              <div className="l">Rata-rata hadir</div>
+              <div className="n">
+                <CountUp value={r.rata} />
+              </div>
+              <div className="s">jemaat terdata per ibadah</div>
+            </div>
+            <div className="s-stat">
+              <div className="l">Total tamu</div>
+              <div className="n">
+                <CountUp value={r.tamu} />
+              </div>
+              <div className="s">tanpa data jemaat</div>
+            </div>
+            <div className="s-stat">
+              <div className="l">Belum disimpan</div>
+              <div className="n">
+                <CountUp value={r.belum} />
+              </div>
+              <div className={r.belum ? "s text-primary" : "s"}>{r.belum ? "minggu belum dikunci" : "semua sudah tersimpan"}</div>
+            </div>
+          </section>
 
-          <div className="grid gap-5 lg:grid-cols-5">
-            <Card className="p-0 lg:col-span-2">
-              <div className="p-5 pb-2">
-                <CardTitle sub="Klik tanggal untuk membuka absensinya">Per minggu</CardTitle>
+          <div className="grid gap-6 lg:grid-cols-5">
+            <section className="glass overflow-hidden rounded-[28px] lg:col-span-2">
+              <div className="px-6 pb-1 pt-[22px]">
+                <h2 className="s-h2">
+                  Per <span className="accent-serif">minggu</span>
+                </h2>
+                <p className="s-sub">Klik tanggal untuk membuka absensinya</p>
               </div>
               <div className="max-h-[560px] overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-surface-solid">
-                    <tr className="text-left text-xs text-muted">
-                      <th className="px-5 py-2 font-medium">Tanggal</th>
-                      <th className="px-3 py-2 text-right font-medium">Hadir</th>
-                      <th className="px-3 py-2 text-right font-medium">Tamu</th>
-                      <th className="px-5 py-2 font-medium">Status</th>
+                <table className="s-tbl">
+                  <thead className="sticky top-0 z-10 bg-surface-solid">
+                    <tr>
+                      <th>Tanggal</th>
+                      <th className="!text-right">Hadir</th>
+                      <th className="!text-right">Tamu</th>
+                      <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     {[...sesi].reverse().map((s) => (
-                      <tr key={s.id} className="border-t border-line">
-                        <td className="whitespace-nowrap px-5 py-2.5">
-                          <Link href={`/absensi?tanggal=${s.tanggal}`} className="hover:text-primary">
+                      <tr key={s.id}>
+                        <td className="whitespace-nowrap">
+                          <Link href={`/absensi?tanggal=${s.tanggal}`} className="font-bold hover:text-primary">
                             {fmtDate(s.tanggal)}
                           </Link>
                         </td>
-                        <td className="px-3 py-2.5 text-right font-medium">
-                          {s.status === "sion" ? (r.perSesi.get(s.id) ?? 0) : "-"}
-                        </td>
-                        <td className="px-3 py-2.5 text-right text-muted">{s.status === "sion" ? s.jumlah_tamu : "-"}</td>
-                        <td className="px-5 py-2.5">
+                        <td className="text-right font-extrabold tabular-nums">{s.status === "sion" ? (r.perSesi.get(s.id) ?? 0) : "—"}</td>
+                        <td className="text-right text-muted tabular-nums">{s.status === "sion" ? s.jumlah_tamu : "—"}</td>
+                        <td>
                           {s.status !== "sion" ? (
-                            <Badge>{s.status === "gabung" ? "Gabung umum" : "Libur"}</Badge>
+                            <span className="s-chip">{s.status === "gabung" ? "Gabung umum" : "Libur"}</span>
                           ) : s.disimpan_at ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-success" title={s.disimpan_nama ?? ""}>
-                              <CheckCircle2 size={13} /> Tersimpan
+                            <span className="s-chip gold" title={s.disimpan_nama ?? ""}>
+                              <CheckCircle2 size={12} /> Tersimpan
                             </span>
                           ) : s.tanggal <= isoDate(new Date()) ? (
-                            <Badge color="yellow">Belum disimpan</Badge>
+                            <span className="s-chip bad">Belum disimpan</span>
                           ) : (
-                            <span className="text-xs text-faint">Akan datang</span>
+                            <span className="s-chip">Akan datang</span>
                           )}
                         </td>
                       </tr>
@@ -215,58 +242,69 @@ export default function LaporanPage() {
                   </tbody>
                 </table>
               </div>
-            </Card>
+            </section>
 
-            <Card className="p-0 lg:col-span-3">
-              <div className="flex flex-wrap items-start justify-between gap-3 p-5 pb-2">
-                <CardTitle sub={`Dari ${r.sion.length} ibadah Sion di periode ini`}>Per jemaat</CardTitle>
-                <div className="relative w-56">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-                  <input className="field py-1.5 pl-9 text-xs" placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <section className="glass overflow-hidden rounded-[28px] lg:col-span-3">
+              <div className="flex flex-wrap items-start justify-between gap-3 px-6 pb-3 pt-[22px]">
+                <div>
+                  <h2 className="s-h2">
+                    Per <span className="accent-serif">jemaat</span>
+                  </h2>
+                  <p className="s-sub">Dari {r.sion.length} ibadah Sion di periode ini</p>
                 </div>
+                <label className="s-search !h-11 !flex-[0_1_240px]">
+                  <Search size={16} className="text-muted" />
+                  <span className="sr-only">Cari nama</span>
+                  <input placeholder="Cari nama…" value={q} onChange={(e) => setQ(e.target.value)} />
+                </label>
               </div>
-              <div className="max-h-[560px] overflow-y-auto">
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-surface-solid">
-                    <tr className="text-left text-xs text-muted">
-                      <th className="px-5 py-2 font-medium">Nama</th>
-                      <th className="px-3 py-2 font-medium">Jenjang</th>
-                      <th className="px-5 py-2 font-medium">Kehadiran</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {daftar.map((j) => {
-                      const pct = r.sion.length ? Math.round((j.n / r.sion.length) * 100) : 0;
-                      return (
-                        <tr key={j.id} className="border-t border-line">
-                          <td className="px-5 py-2.5">
-                            {j.nama}
-                            {j.status === "nonaktif" && <span className="ml-2 text-xs text-faint">nonaktif</span>}
-                          </td>
-                          <td className="px-3 py-2.5 text-muted">{jenjang(j)}</td>
-                          <td className="px-5 py-2.5">
-                            <div className="flex items-center gap-3">
-                              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-tint/10">
-                                <div
-                                  className={cn(
-                                    "h-full rounded-full",
-                                    pct >= 75 ? "bg-success" : pct >= 40 ? "bg-primary" : "bg-warning",
-                                  )}
-                                  style={{ width: `${pct}%` }}
-                                />
+              {daftar.length === 0 ? (
+                <div className="px-6 pb-6">
+                  <Empty>Tidak ada jemaat yang cocok.</Empty>
+                </div>
+              ) : (
+                <div className="max-h-[560px] overflow-y-auto">
+                  <table className="s-tbl">
+                    <thead className="sticky top-0 z-10 bg-surface-solid">
+                      <tr>
+                        <th>Nama</th>
+                        <th>Jenjang</th>
+                        <th>Kehadiran</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {daftar.map((j, i) => {
+                        const pct = r.sion.length ? Math.round((j.n / r.sion.length) * 100) : 0;
+                        return (
+                          <tr key={j.id}>
+                            <td>
+                              <div className="flex items-center gap-3">
+                                <Av nama={j.nama} i={i} size={34} />
+                                <span className="font-bold">{j.nama}</span>
+                                {j.status === "nonaktif" && <span className="s-chip">nonaktif</span>}
                               </div>
-                              <span className="text-xs text-muted">
-                                {j.n}/{r.sion.length} · {pct}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                            </td>
+                            <td>
+                              <span className="s-chip whitespace-nowrap">{jenjang(j)}</span>
+                            </td>
+                            <td>
+                              <div className="flex min-w-[170px] items-center gap-3">
+                                <span className="s-track flex-1">
+                                  <i style={{ width: `${Math.max(2, pct)}%`, animationDelay: `${Math.min(i, 20) * 0.03}s` }} />
+                                </span>
+                                <span className={cn("w-[72px] text-right text-xs font-bold tabular-nums", pct < 40 && "text-danger")}>
+                                  {j.n}/{r.sion.length} · {pct}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
           </div>
         </>
       )}

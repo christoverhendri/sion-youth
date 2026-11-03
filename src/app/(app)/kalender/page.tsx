@@ -2,22 +2,29 @@
 
 import { CalendarPlus, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, CardTitle, Empty, ErrorText, Field, Modal, PageHeader } from "@/components/ui";
+import { More, Panel, PanelHead } from "@/components/sion";
+import { Button, Empty, ErrorText, Field, Modal, PageHeader } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { googleCalendarUrl } from "@/lib/ics";
 import type { Activity } from "@/lib/types";
 import { addMonths, cn, firstOfMonth, fmtDate, fmtMonth, isoDate, parseDate } from "@/lib/utils";
 
+// Kunci warna tetap sama di database; nilainya mengikuti palet desain (emas, baja, navy, ivory)
 const WARNA: Record<string, string> = {
-  blue: "#3987e5",
-  orange: "#d95926",
-  aqua: "#199e70",
-  yellow: "#c98500",
-  magenta: "#d55181",
-  violet: "#9085e9",
+  blue: "#C6A15B",
+  orange: "#E3C68A",
+  aqua: "#99A7BD",
+  yellow: "#8A6A2C",
+  magenta: "#D8CFBF",
+  violet: "#5C6E8C",
 };
-const STATUS_COLOR = { rencana: "gray", berjalan: "blue", selesai: "green", batal: "red" } as const;
-const HARI = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const STATUS: Record<Activity["status"], { t: string; c: string }> = {
+  rencana: { t: "Rencana", c: "s-chip gold" },
+  berjalan: { t: "Berjalan", c: "s-chip info" },
+  selesai: { t: "Selesai", c: "s-chip" },
+  batal: { t: "Batal", c: "s-chip bad" },
+};
+const HARI = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 
 export default function KalenderPage() {
   const [bulan, setBulan] = useState(firstOfMonth());
@@ -25,6 +32,8 @@ export default function KalenderPage() {
   const [edit, setEdit] = useState<Activity | "new" | null>(null);
   const [sinkron, setSinkron] = useState(false);
   const [tahun, setTahun] = useState(new Date().getFullYear());
+  const today = isoDate(new Date());
+  const [pilih, setPilih] = useState(today);
 
   const load = useCallback(async () => {
     const { data } = await createClient()
@@ -44,18 +53,20 @@ export default function KalenderPage() {
     setTahun(Number(bulan.slice(0, 4)));
   }, [bulan]);
 
-  // Grid kalender: mulai dari hari Minggu sebelum tanggal 1
+  // Grid kalender: mulai dari hari Senin sebelum tanggal 1, sampai minggu terakhir bulan ini
   const days = useMemo(() => {
     const first = parseDate(bulan);
     const start = new Date(first);
-    start.setDate(1 - first.getDay());
-    return Array.from({ length: 42 }, (_, i) => {
+    start.setDate(1 - ((first.getDay() + 6) % 7));
+    const akhir = parseDate(addMonths(bulan, 1));
+    akhir.setDate(0);
+    const n = Math.ceil(((akhir.getTime() - start.getTime()) / 86400000 + 1) / 7) * 7;
+    return Array.from({ length: n }, (_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return isoDate(d);
     });
   }, [bulan]);
-  const today = isoDate(new Date());
 
   // Timeline per bulan (termin) dalam setahun
   const perBulan = useMemo(
@@ -68,153 +79,192 @@ export default function KalenderPage() {
     [acts, tahun],
   );
 
+  const bulanIni = acts.filter((a) => a.mulai < addMonths(bulan, 1) && a.selesai >= bulan);
+  const listPilih = acts.filter((a) => a.mulai <= pilih && a.selesai >= pilih);
+  const dPilih = parseDate(pilih);
+
   return (
     <>
       <PageHeader
-        title="Kalender Kegiatan"
-        sub="Program kerja & timeline Sion Youth"
+        eyebrow="Kalender Kegiatan"
+        title={fmtMonth(bulan)}
+        sub={`${bulanIni.length} kegiatan bulan ini · tersinkron ke Google Calendar lewat link langganan`}
         action={
           <>
-            <Button onClick={() => setSinkron(true)}>
-              <RefreshCw size={16} /> Sinkron Google Calendar
-            </Button>
-            <Button variant="primary" onClick={() => setEdit("new")}>
-              <Plus size={16} /> Tambah kegiatan
+            <button type="button" onClick={() => setSinkron(true)} className="glass pressable inline-flex h-11 items-center gap-2.5 rounded-full px-4 text-[13px] font-semibold text-muted hover:text-ink">
+              <span className="s-live text-gold" /> Google Calendar
+            </button>
+            <div className="glass flex gap-1 rounded-full p-1">
+              <button aria-label="Bulan sebelumnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setBulan(addMonths(bulan, -1))}>
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                type="button"
+                className="px-2 text-sm font-semibold text-muted hover:text-ink"
+                onClick={() => {
+                  setBulan(firstOfMonth());
+                  setPilih(today);
+                }}
+              >
+                Hari ini
+              </button>
+              <button aria-label="Bulan berikutnya" className="pressable grid h-10 w-10 place-items-center rounded-full hover:bg-surface-2" onClick={() => setBulan(addMonths(bulan, 1))}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            <Button variant="primary" onClick={() => setEdit("new")} className="min-h-[46px] px-6">
+              <Plus size={16} /> Kegiatan
             </Button>
           </>
         }
       />
 
-      <Card className="mb-5">
-        <CardTitle
-          action={
-            <div className="flex items-center gap-1">
-              <Button size="sm" onClick={() => setBulan(firstOfMonth())}>
-                Hari ini
-              </Button>
-              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, -1))}>
-                <ChevronLeft size={18} />
-              </button>
-              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setBulan(addMonths(bulan, 1))}>
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          }
-        >
-          <span className="text-lg capitalize">{fmtMonth(bulan)}</span>
-        </CardTitle>
-        <div className="overflow-x-auto">
-          <div className="grid min-w-[640px] grid-cols-7 overflow-hidden rounded-xl border border-line">
+      <div className="flex flex-wrap items-start gap-6">
+        <Panel className="min-w-0 flex-[999_1_560px] !p-5">
+          <div className="grid grid-cols-7 gap-1.5 sm:gap-2" role="grid" aria-label={`Kalender ${fmtMonth(bulan)}`}>
             {HARI.map((h) => (
-              <div key={h} className="border-b border-line bg-tint/[0.03] px-2 py-2 text-center text-xs text-muted">
+              <span key={h} className="px-1 pb-1.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-muted sm:px-2.5 sm:text-[11px]">
                 {h}
-              </div>
+              </span>
             ))}
-            {days.map((d, i) => {
+            {days.map((d) => {
               const inMonth = d.slice(0, 7) === bulan.slice(0, 7);
               const list = acts.filter((a) => a.mulai <= d && a.selesai >= d);
+              const on = d === pilih;
               return (
-                <div
+                <button
                   key={d}
+                  type="button"
+                  onClick={() => setPilih(d)}
+                  aria-label={`${fmtDate(d)}, ${list.length ? `${list.length} kegiatan` : "tidak ada kegiatan"}`}
+                  aria-pressed={on}
                   className={cn(
-                    "min-h-[92px] border-line p-1.5",
-                    i % 7 !== 6 && "border-r",
-                    i < 35 && "border-b",
-                    !inMonth && "bg-black/20",
+                    "group relative flex min-h-[64px] flex-col gap-1.5 rounded-[18px] border p-1.5 text-left transition duration-300 [transition-timing-function:var(--ease-out)] sm:min-h-[104px] sm:p-2.5",
+                    "hover:-translate-y-[3px] hover:border-gold/55 active:scale-[0.97]",
+                    on ? "border-gold bg-gold/10 shadow-[0_18px_40px_-26px_rgba(198,161,91,0.9)]" : "border-transparent bg-surface-2",
+                    !inMonth && "opacity-35",
                   )}
                 >
-                  <div
+                  <span
                     className={cn(
-                      "mb-1 grid h-6 w-6 place-items-center rounded-full text-xs",
-                      d === today ? "bg-primary font-semibold text-white" : inMonth ? "text-ink" : "text-faint",
+                      "grid h-7 w-7 place-items-center rounded-full text-sm font-bold",
+                      d === today && "bg-gradient-to-b from-[#ebd29c] to-gold text-[#1a1408]",
                     )}
                   >
                     {Number(d.slice(8))}
-                  </div>
-                  <div className="space-y-1">
-                    {list.slice(0, 3).map((a) => (
-                      <button
-                        key={a.id}
-                        onClick={() => setEdit(a)}
-                        title={a.nama}
-                        className={cn(
-                          "block w-full truncate rounded px-1.5 py-0.5 text-left text-[11px] font-medium text-white",
-                          a.status === "batal" && "line-through opacity-50",
-                        )}
-                        style={{ background: WARNA[a.warna] ?? WARNA.blue }}
-                      >
-                        {a.mulai === d || d.endsWith("-01") || parseDate(d).getDay() === 0 ? a.nama : " "}
-                      </button>
-                    ))}
-                    {list.length > 3 && <div className="text-[10px] text-muted">+{list.length - 3} lagi</div>}
-                  </div>
-                </div>
+                  </span>
+                  {list.slice(0, 2).map((a) => (
+                    <span
+                      key={a.id}
+                      className={cn(
+                        "block h-1.5 truncate rounded-[3px] text-[0px] sm:h-auto sm:rounded-lg sm:px-2 sm:py-[3px] sm:text-[11px] sm:font-bold",
+                        a.status === "batal" && "line-through opacity-50",
+                      )}
+                      style={{ background: `${WARNA[a.warna] ?? WARNA.blue}33`, boxShadow: `inset 3px 0 0 ${WARNA[a.warna] ?? WARNA.blue}` }}
+                    >
+                      {a.nama}
+                    </span>
+                  ))}
+                  {list.length > 2 && <span className="hidden text-[10px] font-semibold text-muted sm:block">+{list.length - 2} lagi</span>}
+                </button>
               );
             })}
           </div>
-        </div>
-      </Card>
+        </Panel>
 
-      <Card>
-        <CardTitle
+        <aside className="min-w-0 flex-[1_1_300px] lg:max-w-[340px]">
+          <Panel key={pilih} className="s-pane">
+            <div className="eyebrow !text-[11px]">{dPilih.toLocaleDateString("id-ID", { weekday: "long" })}</div>
+            <div className="mt-1.5 text-[40px] font-bold leading-tight tracking-[-0.03em]">
+              {dPilih.getDate()} <span className="accent-serif">{dPilih.toLocaleDateString("id-ID", { month: "short" })}</span>
+            </div>
+            <div className="mt-5 flex flex-col gap-3">
+              {listPilih.map((a) => (
+                <button key={a.id} type="button" onClick={() => setEdit(a)} className="glass s-lift flex gap-3.5 rounded-[20px] p-4 text-left">
+                  <span className="w-1 shrink-0 self-stretch rounded" style={{ background: WARNA[a.warna] ?? WARNA.blue }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">{a.nama}</span>
+                    <span className="s-sub block">
+                      {a.selesai !== a.mulai ? `${fmtDate(a.mulai, { year: undefined })} – ${fmtDate(a.selesai, { year: undefined })}` : "Satu hari"}
+                      {a.pic && ` · PIC ${a.pic}`}
+                    </span>
+                    <span className={cn("mt-2.5", STATUS[a.status].c)}>{STATUS[a.status].t}</span>
+                  </span>
+                </button>
+              ))}
+              {listPilih.length === 0 && (
+                <div className="px-2.5 py-8 text-center text-sm text-muted">
+                  Tidak ada kegiatan.
+                  <div className="mt-2.5">
+                    <More onClick={() => setEdit("new")}>Tambah kegiatan</More>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Panel>
+        </aside>
+      </div>
+
+      <Panel className="mt-6">
+        <PanelHead
+          title="Timeline proker"
+          accent={String(tahun)}
           sub="Semua program kerja dikelompokkan per bulan"
           action={
-            <div className="flex items-center gap-1">
-              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setTahun(tahun - 1)}>
-                <ChevronLeft size={16} />
+            <div className="glass flex items-center gap-1 rounded-full p-1">
+              <button aria-label="Tahun sebelumnya" className="pressable grid h-9 w-9 place-items-center rounded-full hover:bg-surface-2" onClick={() => setTahun(tahun - 1)}>
+                <ChevronLeft size={15} />
               </button>
-              <span className="px-1 text-sm font-medium">{tahun}</span>
-              <button className="rounded-lg p-1.5 hover:bg-tint/10" onClick={() => setTahun(tahun + 1)}>
-                <ChevronRight size={16} />
+              <span className="px-1 text-sm font-bold tabular-nums">{tahun}</span>
+              <button aria-label="Tahun berikutnya" className="pressable grid h-9 w-9 place-items-center rounded-full hover:bg-surface-2" onClick={() => setTahun(tahun + 1)}>
+                <ChevronRight size={15} />
               </button>
             </div>
           }
-        >
-          Timeline proker {tahun}
-        </CardTitle>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {perBulan.map(({ m, list }) => (
-            <div key={m} className="rounded-xl border border-line bg-surface p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
-                {parseDate(m).toLocaleDateString("id-ID", { month: "long" })}
+        />
+        {acts.length === 0 ? (
+          <Empty>Belum ada kegiatan di tahun {tahun}.</Empty>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {perBulan.map(({ m, list }) => (
+              <div key={m} className="s-pick !cursor-default hover:!translate-y-0" data-on={m === firstOfMonth() || undefined}>
+                <div className="eyebrow mb-3 !text-[11px]">{parseDate(m).toLocaleDateString("id-ID", { month: "long" })}</div>
+                {list.length === 0 ? (
+                  <p className="text-xs text-muted">—</p>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {list.map((a) => (
+                      <li key={a.id}>
+                        <button type="button" onClick={() => setEdit(a)} className="group w-full text-left">
+                          <span className="flex items-center gap-2">
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: WARNA[a.warna] ?? WARNA.blue }} />
+                            <span className="flex-1 truncate text-sm font-bold transition-colors group-hover:text-primary">{a.nama}</span>
+                          </span>
+                          <span className="mt-0.5 flex items-center justify-between gap-2 pl-4 text-[11px] text-muted">
+                            <span className="truncate">
+                              {fmtDate(a.mulai, { year: undefined })}
+                              {a.selesai !== a.mulai && ` – ${fmtDate(a.selesai, { year: undefined })}`}
+                              {a.pic && ` · ${a.pic}`}
+                            </span>
+                            <span className={cn("!h-5 !px-2 !text-[10px]", STATUS[a.status].c)}>{STATUS[a.status].t}</span>
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {list.length === 0 ? (
-                <p className="text-xs text-faint">-</p>
-              ) : (
-                <ul className="space-y-2">
-                  {list.map((a) => (
-                    <li key={a.id}>
-                      <button onClick={() => setEdit(a)} className="w-full text-left">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: WARNA[a.warna] }} />
-                          <span className="flex-1 truncate text-sm font-medium">{a.nama}</span>
-                          <Badge color={STATUS_COLOR[a.status]}>{a.status}</Badge>
-                        </div>
-                        <div className="pl-4 text-[11px] text-muted">
-                          {fmtDate(a.mulai, { year: undefined })}
-                          {a.selesai !== a.mulai && ` – ${fmtDate(a.selesai, { year: undefined })}`}
-                          {a.pic && ` · ${a.pic}`}
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-        {acts.length === 0 && (
-          <div className="mt-4">
-            <Empty>Belum ada kegiatan di tahun {tahun}.</Empty>
+            ))}
           </div>
         )}
-      </Card>
+      </Panel>
 
       <ActivityModal value={edit} onClose={() => setEdit(null)} onSaved={load} />
       <SinkronModal open={sinkron} onClose={() => setSinkron(false)} />
     </>
   );
 }
+
 
 function ActivityModal({
   value,
@@ -313,7 +363,7 @@ function ActivityModal({
                 type="button"
                 key={k}
                 onClick={() => set("warna", k)}
-                className={cn("h-7 w-7 rounded-full border-2", f.warna === k ? "border-ink" : "border-transparent")}
+                className={cn("pressable h-9 w-9 rounded-full border-2 transition-transform", f.warna === k ? "scale-110 border-ink shadow-[0_0_0_3px_rgba(198,161,91,0.35)]" : "border-transparent hover:scale-110")}
                 style={{ background: c }}
                 aria-label={k}
               />
@@ -331,7 +381,7 @@ function ActivityModal({
                 href={googleCalendarUrl({ nama: f.nama, mulai: f.mulai, selesai: f.selesai, deskripsi: f.deskripsi, pic: f.pic })}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface-2 px-4 py-2.5 text-sm font-medium transition hover:border-line-strong hover:bg-tint/10"
+                className="btn-ghost pressable inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold"
                 title="Buka Google Calendar dengan data kegiatan ini sudah terisi"
               >
                 <CalendarPlus size={15} /> Ke Google Calendar
@@ -409,14 +459,14 @@ function SinkronModal({ open, onClose }: { open: boolean; onClose: () => void })
           </div>
         </Field>
         {lokal && (
-          <p className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-warning">
+          <p className="rounded-2xl bg-gold/10 p-4 text-primary">
             Kamu membuka dari <b>localhost</b>, jadi Google tidak bisa mengakses link ini. Buka dashboard dari alamat
             yang sudah online (Vercel), lalu salin linknya dari sana.
           </p>
         )}
         <ErrorText>{error}</ErrorText>
 
-        <ol className="space-y-2 rounded-xl border border-line bg-surface p-4 text-muted">
+        <ol className="space-y-2 rounded-[22px] bg-surface-2 p-5 text-muted">
           <li>
             <b className="text-ink">1.</b> Salin link di atas.
           </li>

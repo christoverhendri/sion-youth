@@ -1,12 +1,14 @@
 "use client";
 
-import { AlertTriangle, CakeSlice, CalendarDays, CheckCircle2, CircleDashed, ClipboardCheck, UserPlus, Users } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, CircleDashed, Heart, Network, TrendingUp, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TrendArea } from "@/components/charts";
+import { CountUp } from "@/components/effects";
 import { FollowUpButton } from "@/components/followup";
 import { useMe } from "@/components/role";
-import { Badge, Card, CardTitle, Empty, Loading, Stat } from "@/components/ui";
+import { Av, More, Panel, PanelHead, Seg, inisial } from "@/components/sion";
+import { Empty, Loading } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { loadKehadiran, trenKehadiran, type Kehadiran } from "@/lib/data";
 import type { AbsenRow, Activity, GdgGroup, GdgSession, IbadahSession, Jemaat } from "@/lib/types";
@@ -66,238 +68,337 @@ export default function DashboardPage() {
   const tren = trenKehadiran(keh, false);
   const terakhir = tren.at(-1);
   const sebelumnya = tren.at(-2);
+  const rata = tren.length ? Math.round(tren.reduce((s, t) => s + t.value, 0) / tren.length) : 0;
   const ultah = useMemo(() => {
     const m = new Date().getMonth();
     return aktif
       .filter((j) => j.tanggal_lahir && parseDate(j.tanggal_lahir).getMonth() === m)
       .sort((a, b) => parseDate(a.tanggal_lahir!).getDate() - parseDate(b.tanggal_lahir!).getDate());
   }, [aktif]);
-  const daftarAbsen = absen.filter((a) => level === "semua" || a.absen_beruntun >= ABSEN_MERAH);
+  const merah = absen.filter((a) => a.absen_beruntun >= ABSEN_MERAH);
+  const daftarAbsen = level === "semua" ? absen : merah;
   const gname = (id: string | null) => groups.find((g) => g.id === id)?.nama;
+
+  // Laporan GDG bulan ini: grup aktif yang sesinya sudah lewat dan sudah disimpan
+  const grupAktif = groups.filter((g) => g.is_active);
+  const lapor = grupAktif.map((g) => {
+    const s = gdgSesi.find((x) => x.group_id === g.id) ?? null;
+    return { g, s, sudah: !!s?.disimpan_at };
+  });
+  const sudahLapor = lapor.filter((x) => x.sudah).length;
+  const statusIbadah = !ibadah
+    ? null
+    : ibadah.status !== "sion"
+      ? ibadah.status === "gabung"
+        ? "Minggu ini gabung ibadah umum"
+        : "Minggu ini libur"
+      : ibadah.disimpan_at
+        ? `Absensi ibadah sudah disimpan ${ibadah.disimpan_nama ?? ""}`
+        : "Absensi ibadah minggu ini belum disimpan";
 
   if (!jemaat) return <Loading />;
 
   return (
     <>
-      <div className="mb-6">
-        <p className="text-sm text-muted">Shalom, {me.full_name ?? me.username} 👋</p>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard Sion Youth</h1>
-      </div>
-
-      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Jemaat aktif" value={aktif.length} icon={<Users size={16} />} sub={`${jemaat.length - aktif.length} nonaktif`} />
-        <Stat
-          label="Hadir ibadah terakhir"
-          value={terakhir?.value ?? "-"}
-          icon={<ClipboardCheck size={16} />}
-          sub={
-            terakhir && sebelumnya ? (
-              <span className={terakhir.value >= sebelumnya.value ? "text-success" : "text-danger"}>
-                {terakhir.value >= sebelumnya.value ? "▲" : "▼"} {Math.abs(terakhir.value - sebelumnya.value)} dari minggu
-                sebelumnya
-              </span>
-            ) : (
-              terakhir?.name
-            )
-          }
-        />
-        <Stat label="Jemaat baru bulan ini" value={baruBulanIni} icon={<UserPlus size={16} />} />
-        <Stat
-          label="Perlu di-follow up"
-          value={absen.filter((a) => a.absen_beruntun >= ABSEN_MERAH).length}
-          icon={<AlertTriangle size={16} />}
-          sub={`absen ${ABSEN_MERAH}× berturut-turut atau lebih`}
-        />
-      </div>
-
-      <Card className="mb-5 py-4">
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted">Status absensi</span>
-          <StatusAbsen
-            href="/absensi"
-            label={`Ibadah ${fmtDate(mingguIni(), { year: undefined })}`}
-            sesi={ibadah}
-            catatan={ibadah && ibadah.status !== "sion" ? (ibadah.status === "gabung" ? "Gabung umum" : "Libur") : null}
-          />
-          {groups
-            .filter((g) => g.is_active)
-            .map((g) => {
-              const s = gdgSesi.find((x) => x.group_id === g.id) ?? null;
-              const lewat = s && s.tanggal <= isoDate(new Date());
-              return (
-                <StatusAbsen
-                  key={g.id}
-                  href={`/gdg/${g.id}`}
-                  label={g.nama}
-                  sesi={s}
-                  catatan={!s ? null : s.status === "batal" ? "Batal" : !lewat ? `Jadwal ${fmtDate(s.tanggal, { year: undefined })}` : null}
-                />
-              );
-            })}
+      <section className="mb-14 flex flex-col items-center pt-6 text-center sm:pt-12">
+        <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-line bg-surface py-1.5 pl-1.5 pr-4 text-[13px] text-muted backdrop-blur-xl">
+          <span className="rounded-full bg-gold/15 px-2.5 py-0.5 text-xs font-bold text-primary">Shalom</span>
+          {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long" })}
         </div>
-      </Card>
+        <h1 className="max-w-[900px] text-[44px] font-semibold leading-[1.02] tracking-[-0.035em] sm:text-[72px] lg:text-[82px]">
+          <span className="word-in">Pelayanan</span> <span className="word-in [animation-delay:90ms]">yang</span>{" "}
+          <span className="accent-serif word-in [animation-delay:180ms]">bertumbuh</span>
+          <br />
+          <span className="word-in [animation-delay:270ms]">bersama</span> <span className="word-in [animation-delay:360ms]">jemaat.</span>
+        </h1>
+        <p className="mt-6 max-w-[520px] text-base leading-relaxed text-muted sm:text-lg">
+          Halo {(me.full_name ?? me.username).split(" ")[0]}, ini yang perlu kamu tahu hari ini.
+        </p>
+        <div className="mt-9 flex flex-wrap justify-center gap-3">
+          <Link href="/absensi" className="btn-gold pressable group inline-flex min-h-[54px] items-center gap-3 rounded-full pl-7 pr-2.5 text-[15px] font-bold">
+            Isi Absensi Minggu Ini
+            <span className="grid h-[34px] w-[34px] place-items-center rounded-full bg-black/10 transition-transform duration-300 [transition-timing-function:var(--spring)] group-hover:-rotate-45">
+              <ArrowRight size={16} />
+            </span>
+          </Link>
+          <Link href="/jemaat" className="btn-ghost pressable inline-flex min-h-[54px] items-center gap-2 rounded-full px-6 text-[15px] font-semibold backdrop-blur-xl">
+            <UserPlus size={17} /> Data Jemaat
+          </Link>
+        </div>
+        <div className="mt-7 flex flex-wrap justify-center gap-x-7 gap-y-2 text-[13px] text-muted">
+          {statusIbadah && (
+            <Link href="/absensi" className="inline-flex items-center gap-2 hover:text-ink">
+              {ibadah?.disimpan_at || ibadah?.status !== "sion" ? (
+                <CheckCircle2 size={15} className="text-gold" />
+              ) : (
+                <CircleDashed size={15} className="text-gold" />
+              )}
+              {statusIbadah}
+            </Link>
+          )}
+          {grupAktif.length > 0 && (
+            <Link href="/gdg" className="inline-flex items-center gap-2 hover:text-ink">
+              <CheckCircle2 size={15} className="text-gold" />
+              {sudahLapor} dari {grupAktif.length} GDG sudah lapor
+            </Link>
+          )}
+          {ultah.length > 0 && (
+            <span className="inline-flex items-center gap-2">
+              <CalendarDays size={15} className="text-gold" />
+              {ultah.length} ulang tahun bulan ini
+            </span>
+          )}
+        </div>
+      </section>
 
       {review > 0 && (
-        <Link href="/jemaat" className="mb-5 block">
-          <Card className="flex items-center gap-3 border-warning/30 py-3 text-sm hover:bg-tint/[0.05]">
-            <Badge color="yellow">{review}</Badge>
-            Data jemaat baru dari form / usher belum dicek pengurus. Buka Data Jemaat → &quot;Perlu review&quot;.
-          </Card>
+        <Link
+          href="/jemaat"
+          className="glass mx-auto mb-6 flex w-fit max-w-full items-center gap-3 rounded-full py-1.5 pl-1.5 pr-5 text-sm text-muted hover:text-ink"
+        >
+          <span className="s-chip gold">{review} perlu review</span>
+          Data jemaat baru dari form / usher belum dicek pengurus
+          <ArrowRight size={14} />
         </Link>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-5">
-        <Card className="lg:col-span-3">
-          <CardTitle
+      <section className="glass s-stats" aria-label="Ringkasan angka">
+        <div className="s-stat">
+          <div className="l">Jemaat aktif</div>
+          <div className="n">
+            <CountUp value={aktif.length} />
+          </div>
+          <div className="s">{jemaat.length - aktif.length} nonaktif</div>
+        </div>
+        <div className="s-stat">
+          <div className="l">Hadir ibadah terakhir</div>
+          <div className="n">{terakhir ? <CountUp value={terakhir.value} /> : "—"}</div>
+          <div className="s text-primary">
+            {terakhir && sebelumnya
+              ? `${terakhir.value >= sebelumnya.value ? "↑" : "↓"} ${Math.abs(terakhir.value - sebelumnya.value)} dari minggu sebelumnya`
+              : (terakhir?.name ?? "belum ada data")}
+          </div>
+        </div>
+        <div className="s-stat">
+          <div className="l">Jemaat baru bulan ini</div>
+          <div className="n">
+            <CountUp value={baruBulanIni} />
+          </div>
+          <div className="s">sejak {fmtDate(firstOfMonth(), { year: undefined })}</div>
+        </div>
+        <div className="s-stat">
+          <div className="l">Perlu disapa</div>
+          <div className="n">
+            <CountUp value={merah.length} />
+          </div>
+          <div className="s">absen {ABSEN_MERAH}+ minggu</div>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-3" aria-label="Sorotan">
+        {/* Kehadiran */}
+        <article data-tilt className="glass s-card group">
+          <div className="flex items-center gap-3.5">
+            <span className="s-ico">
+              <TrendingUp size={20} />
+            </span>
+            <h2 className="text-[17px] font-bold">Kehadiran ibadah</h2>
+          </div>
+          <p className="mt-4 text-sm leading-relaxed text-muted">{tren.length} ibadah Sion terakhir.</p>
+          <div className="mt-9">
+            <TrendArea data={tren} />
+          </div>
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-xs text-muted">Rata-rata {rata} / minggu</span>
+            <More href="/analisis">Analisis</More>
+          </div>
+        </article>
+
+        {/* Perlu disapa */}
+        <article data-tilt className="glass s-card group">
+          <div className="flex items-center gap-3.5">
+            <span className="s-ico">
+              <Heart size={20} />
+            </span>
+            <h2 className="text-[17px] font-bold">Perlu disapa</h2>
+          </div>
+          <p className="mt-4 text-sm leading-relaxed text-muted">
+            Absen {ABSEN_MERAH} minggu atau lebih. Satu sapaan sering cukup.
+          </p>
+          <svg className="s-orbit mt-2" viewBox="0 0 240 208" width="100%" height="200" role="img" aria-label={`${merah.length} jemaat perlu disapa`}>
+            <circle className="ring" cx="120" cy="104" r="44" />
+            <circle className="ring hi" cx="120" cy="104" r="72" />
+            <circle className="ring" cx="120" cy="104" r="98" />
+            <g className="spin">
+              <circle className="sat" cx="192" cy="104" r="4" />
+              <circle className="sat" cx="48" cy="104" r="3" />
+              <circle className="sat" cx="120" cy="32" r="2.5" />
+            </g>
+            <g className="spin rev">
+              <circle className="sat" cx="120" cy="202" r="3.5" />
+              <circle className="sat" cx="51" cy="70" r="2.5" />
+              <circle cx="189" cy="140" r="3" fill="#99A7BD" />
+            </g>
+            <g className="core">
+              <rect x="96" y="80" width="48" height="48" rx="15" fill="rgba(198,161,91,0.18)" stroke="rgba(227,198,138,0.7)" />
+              <text x="120" y="112" textAnchor="middle" fontWeight="800" fontSize="22" fill="var(--primary)">
+                {merah.length}
+              </text>
+            </g>
+          </svg>
+          <div className="mt-1 flex items-center justify-between">
+            <div className="s-stack">
+              {merah.slice(0, 3).map((a, i) => (
+                <Av key={a.id} nama={a.nama} i={i} />
+              ))}
+              {merah.length > 3 && <span className="s-av" style={{ background: "var(--surface-2)", color: "var(--muted)" }}>+{merah.length - 3}</span>}
+            </div>
+            <More href="#disapa">Lihat daftar</More>
+          </div>
+        </article>
+
+        {/* Laporan GDG */}
+        <article data-tilt className="glass s-card group">
+          <div className="flex items-center gap-3.5">
+            <span className="s-ico">
+              <Network size={20} />
+            </span>
+            <h2 className="text-[17px] font-bold">Laporan GDG</h2>
+          </div>
+          <p className="mt-4 text-sm leading-relaxed text-muted">Absensi GDG bulan ini dari tiap grup, terkumpul di satu tempat.</p>
+          <div className="relative mt-2 h-[200px]">
+            <svg viewBox="0 0 300 200" width="100%" height="200" preserveAspectRatio="none" aria-hidden className="absolute inset-0">
+              {[24, 74, 126, 176].map((y, i) => (
+                <path key={y} className="s-flow" d={`M44 ${y} C 130 ${y}, 130 100, 200 100`} style={{ animationDelay: `${-i * 0.4}s` }} />
+              ))}
+            </svg>
+            <div className="absolute left-0 top-0 flex h-[200px] flex-col justify-between">
+              {lapor.slice(0, 4).map(({ g, sudah }) => (
+                <span key={g.id} className="s-node" data-on={sudah || undefined} title={`${g.nama}: ${sudah ? "sudah lapor" : "belum lapor"}`}>
+                  {inisial(g.nama.replace(/^GDG\s+/i, ""))}
+                </span>
+              ))}
+            </div>
+            <div className="s-hub absolute right-[6%] top-[56px]">
+              <span className="text-[22px] font-extrabold leading-none text-primary">{sudahLapor}</span>
+              <span className="mt-1 text-[11px] font-bold text-muted">dari {grupAktif.length}</span>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between">
+            <span className="text-xs text-muted">{grupAktif.length - sudahLapor} grup belum lapor</span>
+            <More href="/gdg">Lihat grup</More>
+          </div>
+        </article>
+      </section>
+
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+        <Panel>
+          <div id="disapa" className="scroll-mt-28" />
+          <PanelHead
+            title="Lama tidak"
+            accent="datang"
             sub="Hanya menghitung minggu ibadah Sion. Minggu gabung/libur dilewati."
             action={
-              <div className="flex rounded-lg border border-line bg-surface p-0.5 text-xs">
-                {(["merah", "semua"] as const).map((l) => (
-                  <button
-                    key={l}
-                    onClick={() => setLevel(l)}
-                    className={cn(
-                      "rounded-md px-2.5 py-1",
-                      level === l ? "bg-tint/10 text-ink" : "text-muted hover:text-ink",
-                    )}
-                  >
-                    {l === "merah" ? `≥ ${ABSEN_MERAH} minggu` : `≥ ${ABSEN_KUNING} minggu`}
-                  </button>
-                ))}
-              </div>
+              <Seg
+                small
+                label="Batas absen"
+                value={level}
+                onChange={setLevel}
+                options={[
+                  { value: "merah", label: `≥ ${ABSEN_MERAH} minggu`, count: merah.length },
+                  { value: "semua", label: `≥ ${ABSEN_KUNING} minggu`, count: absen.length },
+                ]}
+              />
             }
-          >
-            🔔 Lama tidak datang
-          </CardTitle>
+          />
           {daftarAbsen.length === 0 ? (
-            <Empty>Tidak ada. Puji Tuhan! 🙌</Empty>
+            <Empty>Tidak ada. Puji Tuhan!</Empty>
           ) : (
-            <ul className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
-              {daftarAbsen.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
-                >
-                  <span
-                    className={cn(
-                      "grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold",
-                      a.absen_beruntun >= ABSEN_MERAH ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning",
-                    )}
-                  >
-                    {a.absen_beruntun}
-                  </span>
+            <div className="max-h-[460px] overflow-y-auto px-[14px]">
+              {daftarAbsen.map((a, i) => (
+                <div key={a.id} className="s-row flex-wrap">
+                  <Av nama={a.nama} i={i} />
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{a.nama}</div>
-                    <div className="text-xs text-muted">
+                    <div className="truncate font-bold">{a.nama}</div>
+                    <div className="s-sub">
                       {a.status_akademik}
                       {gname(a.gdg_group_id) && ` · ${gname(a.gdg_group_id)}`} · terakhir hadir{" "}
                       {a.terakhir_hadir ? fmtDate(a.terakhir_hadir) : "belum pernah"}
                     </div>
-                    {a.terakhir_followup && (
-                      <div className="text-[11px] text-success">✓ di-follow up {fmtDate(a.terakhir_followup)}</div>
-                    )}
+                    {a.terakhir_followup && <div className="mt-0.5 text-[11px] font-semibold text-primary">✓ disapa {fmtDate(a.terakhir_followup)}</div>}
                   </div>
-                  <FollowUpButton jemaat={a} onLogged={() => setReload((x) => x + 1)} />
-                </li>
+                  <span className={cn("s-chip", a.absen_beruntun >= ABSEN_MERAH ? "bad" : "gold")}>{a.absen_beruntun}× absen</span>
+                  <FollowUpButton jemaat={a} label="Sapa" onLogged={() => setReload((x) => x + 1)} />
+                </div>
               ))}
-            </ul>
+            </div>
           )}
-        </Card>
+        </Panel>
 
-        <div className="space-y-5 lg:col-span-2">
-          <Card>
-            <CardTitle sub="Kirim ucapan lewat WhatsApp">
-              <span className="inline-flex items-center gap-2">
-                <CakeSlice size={16} className="text-[#d55181]" /> Ulang tahun bulan ini
-              </span>
-            </CardTitle>
+        <div className="space-y-6">
+          <Panel>
+            <PanelHead title="Ulang" accent="tahun" sub={`${ultah.length} orang bulan ini`} />
             {ultah.length === 0 ? (
               <Empty>Tidak ada yang ulang tahun bulan ini.</Empty>
             ) : (
-              <ul className="space-y-2">
-                {ultah.map((j) => {
+              <div className="max-h-[300px] overflow-y-auto px-[14px]">
+                {ultah.map((j, i) => {
                   const lewat = isoDate(new Date()).slice(5) > j.tanggal_lahir!.slice(5);
                   return (
-                    <li key={j.id} className={cn("flex items-center gap-3 text-sm", lewat && "opacity-50")}>
-                      <span className="w-14 text-xs text-muted">{fmtDate(j.tanggal_lahir, { year: undefined })}</span>
-                      <span className="flex-1 truncate">
-                        {j.nama} <span className="text-faint">({(umur(j.tanggal_lahir) ?? 0) + (lewat ? 0 : 1)})</span>
-                      </span>
-                      <FollowUpButton jemaat={j} label="Ucapan" pesan={pesanUltah(j.nama)} />
-                    </li>
+                    <div key={j.id} className={cn("s-row", lewat && "opacity-50")}>
+                      <Av nama={j.nama} i={i} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bold">{j.nama}</div>
+                        <div className="s-sub">
+                          {fmtDate(j.tanggal_lahir, { year: undefined })} · {(umur(j.tanggal_lahir) ?? 0) + (lewat ? 0 : 1)} tahun
+                        </div>
+                      </div>
+                      <FollowUpButton jemaat={j} label="Ucapkan" pesan={pesanUltah(j.nama)} />
+                    </div>
                   );
                 })}
-              </ul>
+              </div>
             )}
-          </Card>
+          </Panel>
 
-          <Card>
-            <CardTitle
-              action={
-                <Link href="/kalender" className="text-xs text-primary hover:underline">
-                  Lihat kalender
-                </Link>
-              }
-            >
-              <span className="inline-flex items-center gap-2">
-                <CalendarDays size={16} className="text-primary" /> Kegiatan mendatang
-              </span>
-            </CardTitle>
+          <Panel>
+            <PanelHead title="Agenda" accent="mendatang" action={<More href="/kalender">Kalender</More>} />
             {acts.length === 0 ? (
               <Empty>Belum ada kegiatan terjadwal.</Empty>
             ) : (
-              <ul className="space-y-2.5">
-                {acts.map((a) => (
-                  <li key={a.id} className="flex items-start gap-3 text-sm">
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                    <div className="flex-1">
-                      <div className="font-medium">{a.nama}</div>
-                      <div className="text-xs text-muted">
-                        {fmtDate(a.mulai)}
-                        {a.selesai !== a.mulai && ` – ${fmtDate(a.selesai)}`}
-                        {a.pic && ` · PIC ${a.pic}`}
+              <div className="px-[14px]">
+                {acts.map((a) => {
+                  const d = parseDate(a.mulai);
+                  const hariIni = a.mulai <= isoDate(new Date());
+                  return (
+                    <div key={a.id} className="s-row">
+                      <div className="s-datebox">
+                        <span className="text-[11px] font-bold uppercase text-muted">
+                          {d.toLocaleDateString("id-ID", { weekday: "short" })}
+                        </span>
+                        <span className="text-xl font-extrabold">{d.getDate()}</span>
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-bold">{a.nama}</div>
+                        <div className="s-sub">
+                          {a.selesai !== a.mulai ? `s.d. ${fmtDate(a.selesai, { year: undefined })}` : fmtDate(a.mulai, { year: undefined })}
+                          {a.pic && ` · PIC ${a.pic}`}
+                        </div>
+                      </div>
+                      {hariIni && (
+                        <span className="s-chip gold">
+                          <i className="s-live" />
+                          Berjalan
+                        </span>
+                      )}
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  );
+                })}
+              </div>
             )}
-          </Card>
+          </Panel>
         </div>
-
-        <Card className="lg:col-span-5">
-          <CardTitle sub="Jumlah jemaat terdata yang hadir, 12 ibadah Sion terakhir">Tren kehadiran</CardTitle>
-          <TrendArea data={tren} />
-        </Card>
-      </div>
+      </section>
     </>
-  );
-}
-
-function StatusAbsen({
-  href,
-  label,
-  sesi,
-  catatan,
-}: {
-  href: string;
-  label: string;
-  sesi: { disimpan_at: string | null; disimpan_nama: string | null } | null;
-  catatan: string | null;
-}) {
-  return (
-    <Link href={href} className="inline-flex items-center gap-2 hover:text-primary" title={sesi?.disimpan_nama ?? ""}>
-      {catatan ? (
-        <CircleDashed size={16} className="text-faint" />
-      ) : sesi?.disimpan_at ? (
-        <CheckCircle2 size={16} className="text-success" />
-      ) : (
-        <AlertTriangle size={16} className="text-warning" />
-      )}
-      <span>{label}</span>
-      <span className="text-xs text-muted">
-        {catatan ?? (sesi?.disimpan_at ? `disimpan ${sesi.disimpan_nama ?? ""}` : "belum disimpan")}
-      </span>
-    </Link>
   );
 }
