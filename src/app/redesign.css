@@ -348,7 +348,174 @@
   }
 }
 
+/* ===== Halaman login (sama dengan desain kanvas) ===== */
+.login {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 100vh;
+}
+.login-art {
+  position: relative;
+  flex: 1 1 520px;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 56px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.login-side {
+  flex: 1 1 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+.login-form {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 34px;
+  box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.65);
+  animation: login-rise 0.9s var(--ease-out) 1.6s backwards;
+}
+:root[data-theme="light"] .login-form {
+  box-shadow: 0 40px 100px -40px rgba(38, 53, 77, 0.3);
+}
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(8px);
+  }
+}
+.login-big {
+  margin: 18px 0 0;
+  font-size: 76px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+}
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.login-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  outline: none;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    background-color 0.25s;
+}
+.login-input::placeholder {
+  color: var(--muted);
+}
+.login-input:focus {
+  border-color: rgba(198, 161, 91, 0.7);
+  box-shadow: 0 0 0 5px rgba(198, 161, 91, 0.12);
+  background: transparent;
+}
+/* Bola palet yang melayang: emas besar, navy, baja kecil */
+.login-disc {
+  position: absolute;
+  right: -120px;
+  top: 80px;
+  width: 420px;
+  height: 420px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, #f3dda8, #c6a15b 45%, #7a5f2e 80%);
+  box-shadow: 0 60px 120px -30px rgba(198, 161, 91, 0.6);
+  animation: login-float 9s ease-in-out infinite;
+}
+.login-disc.n {
+  right: 120px;
+  top: 300px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle at 35% 30%, #3a4d6e, #26354d 55%, #141e2e);
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6);
+  animation-duration: 11s;
+  animation-delay: -3s;
+}
+.login-disc.s {
+  right: 40px;
+  top: 40px;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(circle at 35% 30%, #e6ecf5, #99a7bd 60%, #6c7a90);
+  animation-duration: 7s;
+  animation-delay: -1s;
+}
+@keyframes login-float {
+  50% {
+    transform: translateY(-24px) rotate(8deg);
+  }
+}
+.login-ribbon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.login-ribbon .rb {
+  fill: none;
+  stroke: #c6a15b;
+  stroke-width: 1.2;
+  opacity: 0.26;
+}
+.login-ribbon .gl {
+  fill: none;
+  stroke: #f3dda8;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-dasharray: 90 1900;
+  stroke-dashoffset: 1990;
+  animation: gleam 9s linear infinite;
+  filter: drop-shadow(0 0 6px #e3c68a);
+}
+@media (max-width: 640px) {
+  .login-big {
+    font-size: 48px;
+  }
+  .login-art {
+    padding: 32px 20px;
+  }
+  .login-form {
+    padding: 28px 22px;
+  }
+  .login-disc {
+    width: 240px;
+    height: 240px;
+    right: -80px;
+  }
+  .login-disc.n {
+    width: 130px;
+    height: 130px;
+    right: 90px;
+    top: 220px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .login-form,
+  .login-disc,
+  .login-ribbon .gl,
   .navpill,
   .navsheet,
   .tg *,

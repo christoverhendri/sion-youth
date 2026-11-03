@@ -21,7 +21,7 @@ type NavGroup = {
 
 const ALL: Role[] = ["pengurus", "penatalayan", "gdg_leader"];
 const NAV: (NavLink | NavGroup)[] = [
-  { href: "/", label: "Dashboard", roles: ["pengurus"], aktif: (p) => p === "/" },
+  { href: "/dashboard", label: "Dashboard", roles: ["pengurus"], aktif: (p) => p === "/dashboard" },
   { href: "/jemaat", label: "Jemaat", roles: ["pengurus"], aktif: (p) => p.startsWith("/jemaat") },
   {
     label: "Absensi",
@@ -104,7 +104,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     await createClient().auth.signOut();
-    router.replace("/login");
+    router.replace("/");
     router.refresh();
   }
 
@@ -112,7 +112,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 px-3 pt-3 sm:px-4 sm:pt-[18px]">
         <nav aria-label="Menu utama" className="navpill relative mx-auto flex max-w-[1160px] items-center gap-3 rounded-full py-2 pl-[18px] pr-2">
-          <Link href={me.role === "pengurus" ? "/" : "/absensi"} className="group mr-2 flex shrink-0 items-center gap-2.5" aria-label="Sion Youth, ke beranda">
+          <Link href={me.role === "pengurus" ? "/dashboard" : "/absensi"} className="group mr-2 flex shrink-0 items-center gap-2.5" aria-label="Sion Youth, ke beranda">
             <span className="transition-transform duration-500 [transition-timing-function:var(--spring)] group-hover:-rotate-[30deg] group-hover:scale-110">
               <Logo />
             </span>

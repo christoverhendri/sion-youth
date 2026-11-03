@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_KEY, SUPABASE_SIAP, SUPABASE_URL } from "@/lib/supabase/env";
 
 // /kalender-feed dibaca oleh Google Calendar (tanpa login), dijaga token rahasia di URL
-const PUBLIC_PATHS = ["/login", "/daftar", "/kalender-feed"];
+const PUBLIC_PATHS = ["/daftar", "/kalender-feed"];
 
 // Ditampilkan kalau environment variable Supabase belum di-set di hosting (mis. Vercel)
 const HALAMAN_ENV_KOSONG = `<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Konfigurasi belum lengkap</title></head>
@@ -35,10 +35,29 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
+  // Halaman login sekarang ada di root; alamat lama /login diarahkan ke sana
+  if (path === "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+  const isPublic = path === "/" || PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/"));
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // Sudah login tapi membuka halaman login → langsung ke beranda sesuai peran
+  if (user && path === "/") {
+    const { data } = await supabase.from("profiles").select("role, gdg_group_id").eq("id", user.id).single();
+    const url = request.nextUrl.clone();
+    url.pathname =
+      data?.role === "pengurus"
+        ? "/dashboard"
+        : data?.role === "gdg_leader" && data.gdg_group_id
+          ? `/gdg/${data.gdg_group_id}`
+          : "/absensi";
     return NextResponse.redirect(url);
   }
 

@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 async function Gate({ children }: { children: React.ReactNode }) {
   await connection();
   const me = await getSessionProfile();
-  if (!me) redirect("/login");
+  if (!me) redirect("/");
 
   return (
     <MeProvider me={me}>
